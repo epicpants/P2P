@@ -12,6 +12,7 @@ Purpose:server side of chat room
 #include <cstdlib>
 #include <stdio.h>
 #include <cstring>
+#include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>  /* define socket */
 #include <netinet/in.h>  /* define internet socket */
