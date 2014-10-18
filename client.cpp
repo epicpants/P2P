@@ -26,7 +26,6 @@ void * readingOut(void* arg);
 
 int main(int argc, char* argv[])
 {
-  signal(SIGINT, signalHandler);
   pthread_mutex_t m;
   char quit[]="/quit";
   char exitb[]="/exit";
