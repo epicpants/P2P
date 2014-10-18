@@ -33,14 +33,7 @@ int main(int argc, char* argv[])
   struct hostent *hostServer;
   struct sockaddr_in server_addr = { AF_INET, htons( SERVER_PORT ) };
 
-  //checks to see if the correct number of arguments were passed in
-  if(argc != 2)
-  {
-    cout<<"Usage: "<<argv[0]<<" hostname"<<endl;
-    exit(1);
-  }
-
-  //checks to see if the hostname is valid
+   //checks to see if the hostname is valid
   if( (hostServer = gethostbyname(argv[1]) ) == NULL)
   {
     cout<<"host "<<argv[1]<<" not found"<<endl;
