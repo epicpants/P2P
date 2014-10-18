@@ -32,15 +32,6 @@ int main(int argc, char* argv[])
   char part[]="/part";
   struct hostent *hostServer;
   struct sockaddr_in server_addr = { AF_INET, htons( SERVER_PORT ) };
-
-   //checks to see if the hostname is valid
-  if( (hostServer = gethostbyname(argv[1]) ) == NULL)
-  {
-    cout<<"host "<<argv[1]<<" not found"<<endl;
-    exit(1);
-  }
-  
-  memcpy( hostServer->h_addr_list[0], (char*)&server_addr.sin_addr, hostServer->h_length );
     
   //creating a socket for the client
   if( (clientSocket=socket(AF_INET, SOCK_STREAM, 0)) == -1)
