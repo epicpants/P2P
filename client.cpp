@@ -22,14 +22,6 @@ char buffer[1024];
 char code[]="bRZUkq3h173Uc31";
 bool exitCondition=false;
 
-void signalHandler(int signalNumber)
-{
-  if(signalNumber==2)
-  {
-    cout<<"To exit type /quit /exit or /part"<<endl;
-  }
-}
-
 void * readingOut(void* arg);
 
 int main(int argc, char* argv[])
