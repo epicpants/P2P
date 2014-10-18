@@ -1,11 +1,3 @@
-/*
-Authors:Tyler Ryan and Chris Rawlings
-Date:2013.11.14
-Class:CS284
-File:client.cpp
-Purpose:client side of chat room
-*/
-
 #include <iostream>
 #include <pthread.h> 
 #include <signal.h>
