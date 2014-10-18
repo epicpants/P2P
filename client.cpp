@@ -7,12 +7,17 @@ Purpose:client side of chat room
 */
 
 #include <iostream>
-#include <cstdlib>
+#include <pthread.h> 
 #include <signal.h>
-#include <sys/socket.h>
+#include <cstdlib>
 #include <stdio.h>
-#include <string.h>
-#include <netdb.h>
+#include <cstring>
+#include <unistd.h>
+#include <vector>
+#include <sys/types.h>
+#include <sys/socket.h>  /* define socket */
+#include <netinet/in.h>  /* define internet socket */
+#include <netdb.h>       /* define internet socket */
 
 #define SERVER_PORT 7777
 
