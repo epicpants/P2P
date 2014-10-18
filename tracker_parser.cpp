@@ -8,6 +8,35 @@ TrackerFile::TrackerFile()
   m_md5         = "";
 }
 
+string TrackerFile::getFilename()
+{
+  return m_filename;
+}
+
+long TrackerFile::getFilesize()
+{
+  return m_filesize;
+}
+
+string TrackerFile::getDescription()
+{
+  string retVal = m_description;
+
+  for(int i=0,size=retVal.size(); i<size; i++)
+    if(retVal[i] == ' ')
+      retVal[i] = '_';
+
+  if(retVal.size()==0)
+    retVal = '_'; 
+ 
+  return retVal;
+}
+
+string TrackerFile::getMD5()
+{
+  return m_md5;
+}
+
 bool TrackerFile::parseTrackerFile(const char* trackerFileName)
 {
   //Read file into fileContents
@@ -222,6 +251,14 @@ int TrackerFile::create(const char* cmd)
           << timestamp << endl;
 
   outFile.close();
+
+  HostInfo hi;
+  hi.ipaddr    = ipaddr;
+  hi.port      = port;
+  hi.startByte = startByte;
+  hi.endByte   = endByte;
+  hi.timestamp = timestamp;
+  m_hosts.push_back(hi);
 
   return FILE_SUCC;
 }
