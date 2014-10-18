@@ -15,7 +15,18 @@
 
 using namespace std;
 
+void *userinput(void *threadid)
+{
+
+}
+
+void *peerinput(void *threadid)
+{
+
+}
+
+
 int main(int argc, char* argv[])
 {
-  
+
 }
