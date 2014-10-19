@@ -153,7 +153,7 @@ int main(int argc, char* argv[])
 
   while(1)
   {
-
+    //Allows the two main threads to do the real work
   }
 
   return 0;
