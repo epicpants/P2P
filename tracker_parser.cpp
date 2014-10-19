@@ -1,5 +1,7 @@
 #include "tracker_parser.h"
 
+int TrackerFile::hostTTL = 15; //Default 15 min until delete hosts
+
 TrackerFile::TrackerFile()
 {
   m_filename    = "";
@@ -133,6 +135,13 @@ bool TrackerFile::parseHost(char* line)
 
 int TrackerFile::update(const char* cmd)
 {
+  //If no command then remove old hosts;
+  if(cmd == NULL)
+  {
+    rewriteFile();
+    return FILE_SUCC;
+  }
+
   stringstream ss(cmd);
   string trackFile;
   FILE* existingFile;
@@ -180,22 +189,8 @@ int TrackerFile::update(const char* cmd)
       m_hosts.push_back(newHost);
     }
 
-    //Rewrite tracker file
-    ofstream outFile(trackFile.c_str());
-
-    outFile << "Filename: "      << m_filename
-            << "\nFilesize: "    << m_filesize
-            << "\nDescription: " << m_description
-            << "\nMD5: "         << m_md5 << endl;
-    for(int i=0,size=m_hosts.size(); i<size; i++)
-    {
-      outFile << m_hosts[i].ipaddr    << ":"
-              << m_hosts[i].port      << ":"
-              << m_hosts[i].startByte << ":"
-              << m_hosts[i].endByte   << ":"
-              << m_hosts[i].timestamp << endl;
-    }
-    outFile.close();
+    //Remove out-dated host info and rewrite file
+    rewriteFile();
 
     return FILE_SUCC;  
   }
@@ -236,22 +231,6 @@ int TrackerFile::create(const char* cmd)
     if(m_description[i] == '_')
       m_description[i] = ' ';
   
-  //Rewrite tracker file
-  ofstream outFile(trackFile.c_str());
-
-  outFile << "Filename: "      << m_filename
-          << "\nFilesize: "    << m_filesize
-          << "\nDescription: " << m_description
-          << "\nMD5: "         << m_md5 << endl;
-
-  outFile << ipaddr    << ":"
-          << port      << ":"
-          << startByte << ":"
-          << endByte   << ":"
-          << timestamp << endl;
-
-  outFile.close();
-
   HostInfo hi;
   hi.ipaddr    = ipaddr;
   hi.port      = port;
@@ -259,6 +238,9 @@ int TrackerFile::create(const char* cmd)
   hi.endByte   = endByte;
   hi.timestamp = timestamp;
   m_hosts.push_back(hi);
+
+  //Remove out-dated host info and rewrite file
+  rewriteFile();
 
   return FILE_SUCC;
 }
@@ -271,4 +253,52 @@ const HostInfo& TrackerFile::operator[](int i) const
 int TrackerFile::getNumHosts() const
 {
   return m_hosts.size();
+}
+
+void TrackerFile::rewriteFile()
+{
+  if(m_filename.size() > 0)
+  {
+    //Remove outdated hosts
+    removeHosts();
+
+    //Rewrite tracker file
+    string trackFile = m_filename + ".track";
+    ofstream outFile(trackFile.c_str());
+
+    outFile << "Filename: "      << m_filename
+            << "\nFilesize: "    << m_filesize
+            << "\nDescription: " << m_description
+            << "\nMD5: "         << m_md5 << endl;
+    for(int i=0,size=m_hosts.size(); i<size; i++)
+    {
+      outFile << m_hosts[i].ipaddr    << ":"
+              << m_hosts[i].port      << ":"
+              << m_hosts[i].startByte << ":"
+              << m_hosts[i].endByte   << ":"
+              << m_hosts[i].timestamp << endl;
+    }
+
+    outFile.close();
+  }
+}
+
+void TrackerFile::removeHosts()
+{
+  long currentTime = time(NULL);
+  vector<HostInfo>::iterator it;
+  double dt;
+
+  //Remove hosts is timestamp older than hostTTL minutes
+  for(it=m_hosts.begin(); it!=m_hosts.end();)
+  {
+    if((hostTTL*60.0) <= (dt = difftime(currentTime,(*it).timestamp)))
+    {
+      it = m_hosts.erase(it);
+    }
+    else
+    {
+      it++;
+    }
+  }
 }
