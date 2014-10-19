@@ -13,29 +13,40 @@
 
 // For connecting to another host and sending char data
 class DataSender {
-	connect(string IP, int portNum);
-	disconnect();
-	transmit(char* Data);
-}
+	
+	public:
+	bool connect(string IP, int portNum);
+	void disconnect();
+	bool transmit(char* Data);
+};
 
 // For listening and receiving data
 class DataReceiver {
+
+	public:
 	bool listen(int portNum);
-	getData(char* Buffer);
-	bool close();
-}
+	void getData(char* Buffer);
+	void close();
+};
 
 // For sending commands to the server
 class Communicator {
-	setServer(string IP);
-	createTracker(string file, unsigned int sizeMB, string desc, string md5, string host, short port);
-	updateTracker(string file, unsigned long start_bytes, unsigned long end_bytes, string host, short port);
-	listFiles();
-	getFile(string file);
-}
+
+	public:
+	void setServer(string IP);
+	bool createTracker(string file, unsigned int sizeMB, string desc, string md5, string host, short port);
+	bool updateTracker(string file, unsigned long start_bytes, unsigned long end_bytes, string host, short port);
+	
+	// Still debating how to handle the data
+	void listFiles(); 
+	void getTorrent();
+	void getFile(string file, unsigned int piece);
+};
 
 // For receiving commands and responding
 class Server {
-	listen(short port);
+	
+	public:
+	bool listen(short port);
 	// ???
-}
+};
