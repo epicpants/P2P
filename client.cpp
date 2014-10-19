@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <stdio.h>
 #include <cstring>
+#include <string>
 #include <unistd.h>
 #include <vector>
 #include <sys/types.h>
@@ -15,6 +16,9 @@
 using namespace std;
 
 #define SERVER_PORT 7777
+#define PEER_PORT 8888
+
+int peerSocket;
 
 bool createTracker(string fileName)
 {
@@ -22,6 +26,9 @@ bool createTracker(string fileName)
   //check if file exists
   //make tracker
   //update tracker server
+  char fileNameNTCA[fileName.length()];
+  fileName.copy(fileNameNTCA, fileName.length(), 0);
+  //TracerFile.create(fileNameNTCA);
   return true;
 }
 
@@ -45,7 +52,7 @@ bool getTracker()
   return true;
 }
 
-void *userinput(void *threadid)
+void *userInput(void *threadid)
 {
   cout<<"P2P Client Started"<<endl;
   string userCommandString;
@@ -77,15 +84,54 @@ void *userinput(void *threadid)
 
 }
 
-void *peerinput(void *threadid)
+void *peerCommand(void *threadid)
+{
+  //read in command
+  //execute command 
+}
+
+void *peerInput(void *threadid)
 {
   //open socket
   //listen for data
-  //parse data recieved
-  //start executing command  
+  //start peerCommand Thread 
+
+  struct sockaddr_in server_addr = { AF_INET, htons( PEER_PORT ) };
+  struct sockaddr_in client_addr = { AF_INET };
+  unsigned int client_len = sizeof( client_addr );
+  
+  /* create a stream socket */
+  if( ( peerSocket = socket( AF_INET, SOCK_STREAM, 0 ) ) == -1 )
+  {
+    cerr << "Client: socket failed" << endl;
+    exit( 1 );
+  }
+  
+  /* bind the socket to an internet port */
+  if( bind(peerSocket, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1 )
+  {
+    cerr << "Client: bind failed" << endl;
+    exit( 1 );
+  }
+
+  /* listen for clients */
+  if( listen( peerSocket, 1 ) == -1 )
+  {
+    cerr << "Client: listen failed" << endl;
+    exit( 1 );
+  }
+
+  cout << "Client is listening for Peers to establish a connection\n";
+
+  int temp;
+  while((temp = accept(peerSocket, (struct sockaddr*)&client_addr, &client_len )) > 0)
+  {
+    pthread_t peerThread;
+    pthread_create(&peerThread, NULL, peerCommand, &temp);
+  }
 }
 
-void *getfrompeer(void *threadid)
+void *getFromPeer(void *threadid)
 {
   //open socket
   //make request to peer for data
@@ -93,7 +139,7 @@ void *getfrompeer(void *threadid)
   //close
 }
 
-void *sendtopeer(void *threadid)
+void *sendToPeer(void *threadid)
 {
   //open socket
   //transmit piece to peer
@@ -105,9 +151,9 @@ int main(int argc, char* argv[])
 {
   pthread_t threads[65535];
   unsigned int threadCount = 0;
-  int userinputid = pthread_create(&threads[threadCount], NULL, userinput, NULL);
+  int userinputid = pthread_create(&threads[threadCount], NULL, userInput, NULL);
   threadCount++;
-  int peerinputid = pthread_create(&threads[threadCount], NULL, peerinput, NULL);
+  int peerinputid = pthread_create(&threads[threadCount], NULL, peerInput, NULL);
   threadCount++;
 
   while(1)
