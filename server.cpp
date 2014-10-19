@@ -13,7 +13,9 @@ Purpose:server side of chat room
 #include <stdio.h>
 #include <cstring>
 #include <unistd.h>
+#include <dirent.h>
 #include <vector>
+#include "tracker_parser.h"
 #include <sys/types.h>
 #include <sys/socket.h>  /* define socket */
 #include <netinet/in.h>  /* define internet socket */
@@ -24,7 +26,35 @@ using namespace std;
 
 int sd;
 void* runPeer(void* arg);
+void getTrackerFiles(vector<string> & tracker_list_out);
 
+void getTrackerFiles(vector<string> & tracker_list_out)
+{
+  // Open current directory
+  DIR* current_dir = opendir(".");
+  if(current_dir == NULL) // An error occurred
+  {
+    cerr<<"Error. Failed to find current directory"<<endl;
+  }
+  else // No errors
+  {
+    // Get first file
+    dirent * nextEntry = readdir(current_dir);
+    // While there are more files in the directory
+    while(nextEntry != NULL)
+    {
+      string filename = nextEntry -> d_name;
+      // Find if file ends in .track
+      size_t tracker_found = filename.find(".track");
+      if(tracker_found != string::npos)
+      {
+        // Add filename to list of tracker files
+        tracker_list_out.push_back(filename);
+      }
+      nextEntry = readdir(current_dir);
+    }
+  }
+}
 
 int main()
 {
@@ -75,29 +105,75 @@ void* runPeer(void* arg)
   }
   
   int skt = *(int *)arg;
-  char buffer[512];
+  char buffer[1024];
+  char response[1024];
   int length;
   
-  while ((length = read(skt, buffer, sizeof(buffer))) > 0)
-  {
-	buffer[length] = '\0';
-	if((!strcmp(buffer, "REQ LIST"))||(!strcmp(buffer, "req list"))||(!strcmp(buffer, "<REQ LIST>"))||(!strcmp(buffer, "<REQ LIST>\n"))){//list command received
-		//handle_list_req(skt);// handle list request
-		//printf("list request handled.\n");
-	}
-	else if((strstr(buffer,"get")!=NULL)||(strstr(buffer,"GET")!=NULL)){// get command received
-		//xtrct_fname(buffer, " ");// extract filename from the command		
-		//handle_get_req(skt, fname);		
-	}
-	else if((strstr(buffer,"createtracker")!=NULL)||(strstr(buffer,"Createtracker")!=NULL)||(strstr(buffer,"CREATETRACKER")!=NULL)){// get command received
-		//tokenize_createmsg(buffer);
-		//handle_createtracker_req(skt);
-		
-	}
-	else if((strstr(buffer,"updatetracker")!=NULL)||(strstr(buffer,"Updatetracker")!=NULL)||(strstr(buffer,"UPDATETRACKER")!=NULL)){// get command received
-		//tokenize_updatemsg(buffer);
-		//handle_updatetracker_req(skt);		
-	}
+  length = read(skt, buffer, sizeof(buffer));
+  buffer[length] = '\0';
+  if((!strcmp(buffer, "REQ LIST"))||(!strcmp(buffer, "req list"))||(!strcmp(buffer, "<REQ LIST>"))||(!strcmp(buffer, "<REQ LIST>\n"))){//list command received
+    cout<<"Client requested tracker file list"<<endl;
+    vector<string> tracker_files;
+    getTrackerFiles(tracker_files);
+    unsigned int num_tracker_files = tracker_files.size();
+    strcpy(response, "REP LIST ");
+    ostringstream numToString;
+    numToString<<num_tracker_files;
+    const char* num_files = numToString.str().c_str();
+    strcat(response, num_files);
+    write(skt, response, sizeof(response));
+    
+    for(unsigned int i = 0; i < num_tracker_files; i++)
+    {
+      TrackerFile tracker_file;
+      const char* name = tracker_files[i].c_str();
+      if(!tracker_file.parseTrackerFile(name))
+      {
+        long filesize = tracker_file.getFilesize();
+        string md5 = tracker_file.getMD5();
+        const char* file_md5 = md5.c_str();
+        
+        ostringstream file_num_ss;
+        file_num_ss.str("");
+        file_num_ss<<(i+1);
+        const char* file_num = file_num_ss.str().c_str();
+        strcpy(response, file_num);
+        strcat(response, " ");
+        strcat(response, name);
+        strcat(response, " ");
+        
+        ostringstream file_size_ss;
+        file_size_ss.str("");
+        file_size_ss<<filesize;
+        const char* file_size = file_size_ss.str().c_str();
+        strcat(response, file_size);
+        strcat(response, " ");
+        strcat(response, file_md5);
+        write(skt, response, sizeof(response));
+      }
+      else // 
+      {
+        cerr<<"Error parsing tracker file"<<endl;
+        strcpy(response, "Error");
+        write(skt, response, sizeof(response));
+      }
+    }
+    
+    strcpy(response, "REP LIST END");
+    write(skt, response, sizeof(response));
+  }
+  else if((strstr(buffer,"get")!=NULL)||(strstr(buffer,"GET")!=NULL)){// get command received
+      //xtrct_fname(buffer, " ");// extract filename from the command		
+      //handle_get_req(skt, fname);		
+  }
+  else if((strstr(buffer,"createtracker")!=NULL)||(strstr(buffer,"Createtracker")!=NULL)||(strstr(buffer,"CREATETRACKER")!=NULL)){// get command received
+      //tokenize_createmsg(buffer);
+      //handle_createtracker_req(skt);
+      
+  }
+  else if((strstr(buffer,"updatetracker")!=NULL)||(strstr(buffer,"Updatetracker")!=NULL)||(strstr(buffer,"UPDATETRACKER")!=NULL)){// get command received
+      //tokenize_updatemsg(buffer);
+      //handle_updatetracker_req(skt);		
   }
   
   pthread_exit(arg);
