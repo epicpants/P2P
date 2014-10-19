@@ -26,7 +26,22 @@ void *userinput(void *threadid)
     getline(cin, userCommandString);
     stringstream userCommandStringStream(userCommandString);
     userCommandStringStream >> userCommand;
-    
+    if(userCommand == "createtracker" || userCommand == "CREATETRACKER")
+    {
+
+    }
+    else if (userCommand == "list" || userCommand == "LIST")
+    {
+
+    }
+    else if (userCommand == "get" || userCommand == "GET")
+    {
+
+    }
+    else
+    {
+      
+    }
   }
 
 }
