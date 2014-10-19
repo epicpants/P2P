@@ -16,6 +16,7 @@ Purpose:server side of chat room
 #include <dirent.h>
 #include <vector>
 #include "tracker_parser.h"
+#include "md5.h"
 #include <sys/types.h>
 #include <sys/socket.h>  /* define socket */
 #include <netinet/in.h>  /* define internet socket */
@@ -23,6 +24,7 @@ Purpose:server side of chat room
 using namespace std;
 
 #define SERVER_PORT 7777
+#define CHUNK_SIZE 1024
 
 int sd;
 void* runPeer(void* arg);
@@ -106,7 +108,7 @@ void* runPeer(void* arg)
   
   int skt = *(int *)arg;
   char buffer[1024];
-  char response[1024];
+  char* response;
   int length;
   
   length = read(skt, buffer, sizeof(buffer));
@@ -164,8 +166,47 @@ void* runPeer(void* arg)
     write(skt, response, sizeof(response));
   }
   else if((strstr(buffer,"get")!=NULL)||(strstr(buffer,"GET")!=NULL)){// get command received
-      //xtrct_fname(buffer, " ");// extract filename from the command		
-      //handle_get_req(skt, fname);		
+    
+    stringstream ss(buffer);
+    string file_name;
+    FILE* file;
+    long tracker_filesize;
+    char* file_contents;
+    ss >> file_name >> file_name;
+    cout << "Client requested GET for " << file_name << endl;
+    strcpy(response, "REP GET BEGIN");
+    write(skt, response, sizeof(response));
+    
+    file = fopen(file_name.c_str(), "r");
+    if(file != NULL)
+    {
+      fseek(file, 0L, SEEK_END);
+      tracker_filesize = ftell(file);
+      rewind(file);
+      long bytes_read = 0;
+      file_contents = (char*) malloc(sizeof(char) * tracker_filesize);
+      while(bytes_read < tracker_filesize)
+      {
+        if(bytes_read + CHUNK_SIZE > tracker_filesize)
+        {
+          bytes_read += fread(response, sizeof(char), tracker_filesize % CHUNK_SIZE, file);
+          response[tracker_filesize % CHUNK_SIZE] = '\0';
+        }
+        else
+        {
+          bytes_read += fread(response, sizeof(char), CHUNK_SIZE, file);
+        } 
+        write(skt, response, sizeof(response));
+        strcat(file_contents, response);
+      }
+    }
+    fclose(file);
+    string contents = file_contents;
+    MD5 md5(contents);
+    const char* file_md5 = md5.hexdigest().c_str();
+    strcpy(response, "REP GET END ");
+    strcat(response, file_md5);
+    write(skt, response, sizeof(response));
   }
   else if((strstr(buffer,"createtracker")!=NULL)||(strstr(buffer,"Createtracker")!=NULL)||(strstr(buffer,"CREATETRACKER")!=NULL)){// get command received
     TrackerFile tracker_file;
