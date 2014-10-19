@@ -108,7 +108,7 @@ void* runPeer(void* arg)
   
   int skt = *(int *)arg;
   char buffer[1024];
-  char* response;
+  char response[1024];
   int length;
   
   length = read(skt, buffer, sizeof(buffer));
