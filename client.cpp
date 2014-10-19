@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sstream>
 #include <pthread.h> 
 #include <signal.h>
 #include <cstdlib>
@@ -18,10 +19,14 @@ using namespace std;
 void *userinput(void *threadid)
 {
   cout<<"P2P Client Started"<<endl;
+  string userCommandString;
   string userCommand;
   while(1)
   {
-    cin>>userCommand;
+    getline(cin, userCommandString);
+    stringstream userCommandStringStream(userCommandString);
+    userCommandStringStream >> userCommand;
+    
   }
 
 }
