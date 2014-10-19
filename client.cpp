@@ -87,7 +87,8 @@ void *userInput(void *threadid)
 void *peerCommandExecute(void *threadid)
 {
   //read in command
-  //execute command 
+  //execute command(aka send piece)
+  pthread_exit(NULL);
 }
 
 void *peerInput(void *threadid)
@@ -137,6 +138,7 @@ void *getFromPeer(void *threadid)
   //make request to peer for data
   //recieve data
   //close
+  pthread_exit(NULL);
 }
 
 
