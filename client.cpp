@@ -1,4 +1,5 @@
 #include <iostream>
+#include <sstream>
 #include <pthread.h> 
 #include <signal.h>
 #include <cstdlib>
@@ -17,13 +18,37 @@ using namespace std;
 
 void *userinput(void *threadid)
 {
-  cout<<"User Input Started"<<endl;
+  cout<<"P2P Client Started"<<endl;
+  string userCommandString;
+  string userCommand;
+  while(1)
+  {
+    getline(cin, userCommandString);
+    stringstream userCommandStringStream(userCommandString);
+    userCommandStringStream >> userCommand;
+    if(userCommand == "createtracker" || userCommand == "CREATETRACKER")
+    {
+
+    }
+    else if (userCommand == "list" || userCommand == "LIST")
+    {
+
+    }
+    else if (userCommand == "get" || userCommand == "GET")
+    {
+
+    }
+    else
+    {
+      
+    }
+  }
 
 }
 
 void *peerinput(void *threadid)
 {
-  cout<<"Peer Input Started"<<endl;
+  
 }
 
 void *getfrompeer(void *threadid)
@@ -40,6 +65,11 @@ int main(int argc, char* argv[])
   threadCount++;
   int peerinputid = pthread_create(&threads[threadCount], NULL, peerinput, NULL);
   threadCount++;
+
+  while(1)
+  {
+
+  }
 
   return 0;
 }

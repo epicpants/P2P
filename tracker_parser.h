@@ -31,7 +31,7 @@ class TrackerFile
 
   bool parseTrackerFile(const char* trackerFileName);
 
-  int update(const char* cmd);
+  int update(const char* cmd = NULL);
   int create(const char* cmd);
 
   string getFilename();
@@ -41,6 +41,8 @@ class TrackerFile
 
   const HostInfo& operator[](int i) const;
   int getNumHosts() const;
+
+  static int hostTTL;
 
  private:
   string m_filename;
@@ -54,6 +56,8 @@ class TrackerFile
   bool find(const char* key, const char* fileContents, T& value);
   bool parseHost(char* line);
 
+  void rewriteFile();
+  void removeHosts();
 };
 
 template<class T>
