@@ -11,10 +11,29 @@
 #include <sys/socket.h>  /* define socket */
 #include <netinet/in.h>  /* define internet socket */
 #include <netdb.h>       /* define internet socket */
+using namespace std;
 
 #define SERVER_PORT 7777
 
-using namespace std;
+bool createTracker()
+{
+  return true;
+}
+
+bool updateTracker()
+{
+  return true;
+}
+
+bool getList()
+{
+  return true;
+}
+
+bool getTracker()
+{
+  return true;
+}
 
 void *userinput(void *threadid)
 {
@@ -40,7 +59,7 @@ void *userinput(void *threadid)
     }
     else
     {
-      
+
     }
   }
 
