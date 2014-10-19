@@ -11,11 +11,12 @@
 #include <sys/socket.h>  /* define socket */
 #include <netinet/in.h>  /* define internet socket */
 #include <netdb.h>       /* define internet socket */
+#include "tracker_parser.h"
 using namespace std;
 
 #define SERVER_PORT 7777
 
-bool createTracker()
+bool createTracker(string fileName)
 {
   return true;
 }
@@ -47,15 +48,17 @@ void *userinput(void *threadid)
     userCommandStringStream >> userCommand;
     if(userCommand == "createtracker" || userCommand == "CREATETRACKER")
     {
-
+      string trackerFileName;
+      userCommandStringStream >> trackerFileName;
+      createTracker(trackerFileName);
     }
     else if (userCommand == "list" || userCommand == "LIST")
     {
-
+      getList();
     }
     else if (userCommand == "get" || userCommand == "GET")
     {
-
+      getTracker();
     }
     else
     {
