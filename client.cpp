@@ -79,12 +79,25 @@ void *userinput(void *threadid)
 
 void *peerinput(void *threadid)
 {
-  
+  //open socket
+  //listen for data
+  //parse data recieved
+  //start executing command  
 }
 
 void *getfrompeer(void *threadid)
 {
+  //open socket
+  //make request to peer for data
+  //recieve data
+  //close
+}
 
+void *sendtopeer(void *threadid)
+{
+  //open socket
+  //transmit piece to peer
+  //close
 }
 
 
