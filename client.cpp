@@ -34,16 +34,12 @@ void *getfrompeer(void *threadid)
 
 int main(int argc, char* argv[])
 {
-  cout<<"0"<<endl;
   pthread_t threads[65535];
   unsigned int threadCount = 0;
-  cout<<"1"<<endl;
   int userinputid = pthread_create(&threads[threadCount], NULL, userinput, NULL);
   threadCount++;
-  cout<<"2"<<endl;
   int peerinputid = pthread_create(&threads[threadCount], NULL, peerinput, NULL);
   threadCount++;
-  cout<<"3"<<endl;
 
   return 0;
 }
