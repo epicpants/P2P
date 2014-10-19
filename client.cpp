@@ -84,7 +84,7 @@ void *userInput(void *threadid)
 
 }
 
-void *peerCommand(void *threadid)
+void *peerCommandExecute(void *threadid)
 {
   //read in command
   //execute command 
@@ -94,7 +94,7 @@ void *peerInput(void *threadid)
 {
   //open socket
   //listen for data
-  //start peerCommand Thread 
+  //start peerCommandExecute Thread 
 
   struct sockaddr_in server_addr = { AF_INET, htons( PEER_PORT ) };
   struct sockaddr_in client_addr = { AF_INET };
@@ -127,7 +127,7 @@ void *peerInput(void *threadid)
   while((temp = accept(peerSocket, (struct sockaddr*)&client_addr, &client_len )) > 0)
   {
     pthread_t peerThread;
-    pthread_create(&peerThread, NULL, peerCommand, &temp);
+    pthread_create(&peerThread, NULL, peerCommandExecute, &temp);
   }
 }
 
@@ -136,13 +136,6 @@ void *getFromPeer(void *threadid)
   //open socket
   //make request to peer for data
   //recieve data
-  //close
-}
-
-void *sendToPeer(void *threadid)
-{
-  //open socket
-  //transmit piece to peer
   //close
 }
 
