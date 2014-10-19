@@ -18,21 +18,30 @@ using namespace std;
 
 bool createTracker(string fileName)
 {
+  //check if tracker already exists
+  //check if file exists
+  //make tracker
+  //update tracker server
   return true;
 }
 
 bool updateTracker()
 {
+  //push updated tracker to server
+  //download new tracker
   return true;
 }
 
 bool getList()
 {
+  //get list of trackers from server
   return true;
 }
 
 bool getTracker()
 {
+  //download tracker from server
+  //start new thread(getfrompeer) to download file from peers
   return true;
 }
 
