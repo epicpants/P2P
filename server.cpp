@@ -132,6 +132,7 @@ void* runPeer(void* arg)
         long filesize = tracker_file.getFilesize();
         string md5 = tracker_file.getMD5();
         const char* file_md5 = md5.c_str();
+        const char* file_name = tracker_file.getFilename().c_str();
         
         ostringstream file_num_ss;
         file_num_ss.str("");
@@ -139,7 +140,7 @@ void* runPeer(void* arg)
         const char* file_num = file_num_ss.str().c_str();
         strcpy(response, file_num);
         strcat(response, " ");
-        strcat(response, name);
+        strcat(response, file_name);
         strcat(response, " ");
         
         ostringstream file_size_ss;
@@ -167,13 +168,74 @@ void* runPeer(void* arg)
       //handle_get_req(skt, fname);		
   }
   else if((strstr(buffer,"createtracker")!=NULL)||(strstr(buffer,"Createtracker")!=NULL)||(strstr(buffer,"CREATETRACKER")!=NULL)){// get command received
-      //tokenize_createmsg(buffer);
-      //handle_createtracker_req(skt);
-      
+    TrackerFile tracker_file;
+    stringstream ss(buffer);
+    string temp;
+    vector<string> tokens;
+    while(ss >> temp)
+    {
+      tokens.push_back(temp);
+    }
+    unsigned int num_tokens = tokens.size();
+    string ipaddr = tokens[num_tokens-2];
+    string port = tokens[num_tokens-1];
+    cout << "Client " << ipaddr << ":" << port << " requested createtracker for " << tokens[1] << endl;
+    int create_status = FILE_FAIL;
+    try {
+      create_status = tracker_file.create(buffer);
+    }
+    catch(exception& ex)
+    {
+      cerr<<ex.what();
+    }
+    strcpy(response, "createtracker ");
+    if(create_status == FILE_SUCC)
+    {
+      strcat(response, " succ");
+    }
+    else if(create_status == FILE_ERR)
+    {
+      strcat(response, " ferr");
+    }
+    else
+    {
+      strcat(response, " fail");
+    }
+    write(skt, response, sizeof(response));
   }
   else if((strstr(buffer,"updatetracker")!=NULL)||(strstr(buffer,"Updatetracker")!=NULL)||(strstr(buffer,"UPDATETRACKER")!=NULL)){// get command received
-      //tokenize_updatemsg(buffer);
-      //handle_updatetracker_req(skt);		
+    TrackerFile tracker_file;
+    string file_name;
+    string ipaddr;
+    string port;
+    stringstream ss(buffer);
+    // Don't care about "updatetracker", "start_byte", or "end_byte" tokens for console output
+    ss >> file_name >> file_name >> ipaddr >> ipaddr >> ipaddr >> port;
+    cout << "Client " << ipaddr << ":" << port << " requested updatetracker for " << file_name << endl;
+    const char* fname = file_name.c_str();
+    int update_status = FILE_FAIL;
+    try {
+      update_status = tracker_file.update(buffer);
+    }
+    catch(exception& ex)
+    {
+      cerr<<ex.what();
+    }
+    strcpy(response, "updatetracker ");
+    strcat(response, fname);
+    if(update_status == FILE_SUCC)
+    {
+      strcat(response, " succ");
+    }
+    else if(update_status == FILE_ERR)
+    {
+      strcat(response, " ferr");
+    }
+    else
+    {
+      strcat(response, " fail");
+    }
+    write(skt, response, sizeof(response));
   }
   
   pthread_exit(arg);
