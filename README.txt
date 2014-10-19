@@ -13,4 +13,4 @@ test
 
 to run:
 type "server"
-type "client" hostname
+type "client"
