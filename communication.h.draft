@@ -1,0 +1,41 @@
+//possibly <stdio.h> & <stdlib.h> as well
+#include <string.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netdb.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <socket.h>
+#include <unistd.h>
+#include <errno.h>
+#include <sys/wait.h>
+#include <signal.h>
+
+// For connecting to another host and sending char data
+class DataSender {
+	connect(string IP, int portNum);
+	disconnect();
+	transmit(char* Data);
+}
+
+// For listening and receiving data
+class DataReceiver {
+	bool listen(int portNum);
+	getData(char* Buffer);
+	bool close();
+}
+
+// For sending commands to the server
+class Communicator {
+	setServer(string IP);
+	createTracker(string file, unsigned int sizeMB, string desc, string md5, string host, short port);
+	updateTracker(string file, unsigned long start_bytes, unsigned long end_bytes, string host, short port);
+	listFiles();
+	getFile(string file);
+}
+
+// For receiving commands and responding
+class Server {
+	listen(short port);
+	// ???
+}
