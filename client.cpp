@@ -13,18 +13,22 @@
 #include <netinet/in.h>  /* define internet socket */
 #include <netdb.h>       /* define internet socket */
 #include "tracker_parser.h"
+#include "communication.h"
 using namespace std;
 
 #define SERVER_PORT 7777
 #define PEER_PORT 8888
 
 int peerSocket;
+pthread_t threads[65535];
+unsigned int threadCount = 0;
+
 
 bool createTracker(string fileName)
 {
-  //check if tracker already exists
-  //check if file exists
-  //make tracker
+  //check if tracker already exists locally
+  //check if file exists locally
+  //make tracker file
   //update tracker server
   char fileNameNTCA[fileName.length()];
   fileName.copy(fileNameNTCA, fileName.length(), 0);
@@ -35,7 +39,7 @@ bool createTracker(string fileName)
 bool updateTracker()
 {
   //push updated tracker to server
-  //download new tracker
+  //download new trackers
   return true;
 }
 
@@ -45,7 +49,7 @@ bool getList()
   return true;
 }
 
-bool getTracker()
+bool getTracker(string getTrackerFileName)
 {
   //download tracker from server
   //start new thread(getfrompeer) to download file from peers
@@ -57,6 +61,7 @@ void *userInput(void *threadid)
   cout<<"P2P Client Started"<<endl;
   string userCommandString;
   string userCommand;
+  string trackerFileName;
   while(1)
   {
     getline(cin, userCommandString);
@@ -64,7 +69,6 @@ void *userInput(void *threadid)
     userCommandStringStream >> userCommand;
     if(userCommand == "createtracker" || userCommand == "CREATETRACKER")
     {
-      string trackerFileName;
       userCommandStringStream >> trackerFileName;
       createTracker(trackerFileName);
     }
@@ -74,7 +78,8 @@ void *userInput(void *threadid)
     }
     else if (userCommand == "get" || userCommand == "GET")
     {
-      getTracker();
+      userCommandStringStream >> trackerFileName;
+      getTracker(trackerFileName);
     }
     else
     {
@@ -127,25 +132,25 @@ void *peerInput(void *threadid)
   int temp;
   while((temp = accept(peerSocket, (struct sockaddr*)&client_addr, &client_len )) > 0)
   {
-    pthread_t peerThread;
-    pthread_create(&peerThread, NULL, peerCommandExecute, &temp);
+    pthread_create(&threads[threadCount], NULL, peerCommandExecute, &temp);
+    threadCount++;
   }
 }
 
 void *getFromPeer(void *threadid)
 {
+  //get list of peers
   //open socket
-  //make request to peer for data
+  //make request to peers for data
   //recieve data
-  //close
+  //merge data
+  //close socket
   pthread_exit(NULL);
 }
 
 
 int main(int argc, char* argv[])
 {
-  pthread_t threads[65535];
-  unsigned int threadCount = 0;
   int userinputid = pthread_create(&threads[threadCount], NULL, userInput, NULL);
   threadCount++;
   int peerinputid = pthread_create(&threads[threadCount], NULL, peerInput, NULL);
