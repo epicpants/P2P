@@ -25,8 +25,18 @@ void *peerinput(void *threadid)
 
 }
 
+void *getfrompeer(void *threadid)
+{
+
+}
+
 
 int main(int argc, char* argv[])
 {
-
+  pthread_t threads[4294967295];
+  unsigned int threadCount = 0;
+  int userinputid = pthread_create(&threads[threadCount], NULL, userinput, NULL);
+  threadCount++;
+  int peerinputid = pthread_create(&threads[threadCount], NULL, peerinput, NULL);
+  threadCount++;
 }
