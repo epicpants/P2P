@@ -13,6 +13,7 @@
 #include <netinet/in.h>  /* define internet socket */
 #include <netdb.h>       /* define internet socket */
 #include "tracker_parser.h"
+#include "communication.h"
 using namespace std;
 
 #define SERVER_PORT 7777
