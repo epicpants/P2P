@@ -111,6 +111,8 @@ bool getTracker(string getTrackerFileName)
 {
   //download tracker from server
   //start new thread(getfrompeer) to download file from peers
+  getFileData getTrackerData;
+  getTrackerData.getFileDataFileName = getTrackerFileName;
   int getTrackerID = pthread_create(&threads[threadCount], NULL, peerCommandExecute, NULL);
   threadCount++;
   return true;
@@ -201,6 +203,7 @@ void *getFromPeer(void *threadid)
   //recieve data
   //merge data
   //close socket
+  getFileData getFromPeerInfo;
   pthread_exit(NULL);
 }
 
