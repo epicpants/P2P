@@ -80,7 +80,7 @@ int main()
   }
 
   /* listen for clients */
-  if( listen( sd, 1 ) == -1 )
+  if( listen( sd, 10 ) == -1 )
   {
     cerr << "SERVER: listen failed" << endl;
     exit( 1 );
