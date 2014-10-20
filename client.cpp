@@ -12,16 +12,22 @@
 #include <sys/socket.h>  /* define socket */
 #include <netinet/in.h>  /* define internet socket */
 #include <netdb.h>       /* define internet socket */
+#include <sys/stat.h>
 #include "tracker_parser.h"
 #include "communication.h"
+#include "md5.h"
 using namespace std;
 
 #define SERVER_PORT 7777
-#define PEER_PORT 8888
+#define PEER_COMMAND_PORT 8888
+#define PEER_DATA_PORT 9999
+#define MAX_THREAD_COUNT 1000
 
 int peerSocket;
-pthread_t threads[65535];
+pthread_t threads[MAX_THREAD_COUNT];
 unsigned int threadCount = 0;
+TrackerFile tf1;
+//vector <
 
 
 bool createTracker(string fileName)
@@ -30,9 +36,9 @@ bool createTracker(string fileName)
   //check if file exists locally
   //make tracker file
   //update tracker server
-  char fileNameNTCA[fileName.length()];
-  fileName.copy(fileNameNTCA, fileName.length(), 0);
-  //TracerFile.create(fileNameNTCA);
+  string createTrackerServerCommand;
+  createTrackerServerCommand = tf1.createCommand(fileName.c_str(), PEER_DATA_PORT, "Boring Description");
+  cout<<createTrackerServerCommand<<endl;
   return true;
 }
 
@@ -69,15 +75,18 @@ void *userInput(void *threadid)
     userCommandStringStream >> userCommand;
     if(userCommand == "createtracker" || userCommand == "CREATETRACKER")
     {
+      cout<<"Enter file name to create tracker"<<endl;
       userCommandStringStream >> trackerFileName;
       createTracker(trackerFileName);
     }
     else if (userCommand == "list" || userCommand == "LIST")
     {
+      cout<<"Getting list of trackers from server"<<endl;
       getList();
     }
     else if (userCommand == "get" || userCommand == "GET")
     {
+      cout<<"Enter name of tracker file for the file to download"<<endl;
       userCommandStringStream >> trackerFileName;
       getTracker(trackerFileName);
     }
@@ -102,7 +111,7 @@ void *peerInput(void *threadid)
   //listen for data
   //start peerCommandExecute Thread 
 
-  struct sockaddr_in server_addr = { AF_INET, htons( PEER_PORT ) };
+  struct sockaddr_in server_addr = { AF_INET, htons( PEER_COMMAND_PORT ) };
   struct sockaddr_in client_addr = { AF_INET };
   unsigned int client_len = sizeof( client_addr );
   
