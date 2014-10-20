@@ -1,9 +1,18 @@
 #ifndef TRACKER_PARSER_H
 #define TRACKER_PARSER_H
 
+//For getting IP address of local machine
 #include <stdio.h>
+#include <unistd.h>
+#include <string.h> /* for strncpy */
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <netinet/in.h>
+#include <net/if.h>
+#include <arpa/inet.h>
+
 #include <stdlib.h>
-#include <string.h>
 #include <sstream>
 #include <vector>
 #include <ctime>
@@ -34,6 +43,9 @@ class TrackerFile
   int update(const char* cmd = NULL);
   int create(const char* cmd);
 
+  static const char* updateCommand(const char* filename, int port);
+  static const char* createCommand(const char* filename, int port, const char* description="_");
+
   string getFilename();
   long getFilesize();
   string getDescription();
@@ -42,7 +54,9 @@ class TrackerFile
   const HostInfo& operator[](int i) const;
   int getNumHosts() const;
 
-  static int hostTTL;
+  static int    hostTTL;
+  static string trackerDirectory;
+  static string fileDirectory;
 
  private:
   string m_filename;

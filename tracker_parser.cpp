@@ -1,6 +1,8 @@
 #include "tracker_parser.h"
 
 int TrackerFile::hostTTL = 15; //Default 15 min until delete hosts
+string TrackerFile::trackerDirectory = ".";
+string TrackerFile::fileDirectory = ".";
 
 TrackerFile::TrackerFile()
 {
@@ -45,9 +47,14 @@ bool TrackerFile::parseTrackerFile(const char* trackerFileName)
   long   size         = 0;
   size_t length       = 0;
   char*  fileContents = NULL;
-  FILE*  trkrFile     = fopen(trackerFileName,"r");
+  FILE*  trkrFile     = NULL;
   bool   error        = false;
 
+  //Open file
+  string trackerFileNameStr = trackerDirectory + "/" + trackerFileName;
+  trkrFile = fopen(trackerFileNameStr.c_str(),"r");
+
+  //Read File
   if(trkrFile!=NULL)
   {
     if((fseek(trkrFile, 0L, SEEK_END) == 0) &&
@@ -154,7 +161,7 @@ int TrackerFile::update(const char* cmd)
 
   //Get rid of updateTracker command and copy filename
   ss >> trackFile >> trackFile;
-  trackFile += ".track";
+  trackFile = trackerDirectory + "/" + trackFile + ".track";
 
   //Check if file exists
   if(existingFile = fopen(trackFile.c_str(), "r"))
@@ -211,7 +218,7 @@ int TrackerFile::create(const char* cmd)
 
   //Get rid of updateTracker command and copy filename
   ss >> m_filename >> m_filename;
-  trackFile = m_filename + ".track";
+  trackFile = trackerDirectory + "/" + m_filename + ".track";
 
   //Check if file exists
   if(existingFile = fopen(trackFile.c_str(), "r"))
@@ -263,7 +270,7 @@ void TrackerFile::rewriteFile()
     removeHosts();
 
     //Rewrite tracker file
-    string trackFile = m_filename + ".track";
+    string trackFile = trackerDirectory + "/" + m_filename + ".track";
     ofstream outFile(trackFile.c_str());
 
     outFile << "Filename: "      << m_filename
@@ -301,4 +308,83 @@ void TrackerFile::removeHosts()
       it++;
     }
   }
+}
+
+const char* TrackerFile::updateCommand(const char* filename, int port)
+{
+  string md5Val = "0";
+  stringstream cmd;
+  cmd << "<updatetracker ";
+
+  //Add filename
+  cmd << filename << " ";
+
+  //Add start and end bytes
+  ifstream in(filename, ifstream::ate | ifstream::binary);
+  cmd << "0 " << in.tellg() << " ";
+  in.close();
+
+  //Determine and Add IP Address
+  struct ifreq ifr;
+  int fd = socket(AF_INET, SOCK_DGRAM, 0);
+  ifr.ifr_addr.sa_family = AF_INET; //IPv4
+  strncpy(ifr.ifr_name, "eth0", IFNAMSIZ-1);
+  ioctl(fd, SIOCGIFADDR, &ifr);
+  close(fd);
+  cmd << inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr) << " ";
+
+  //Add Port
+  cmd << port << ">\n";
+
+  return cmd.str().c_str();
+}
+
+const char* TrackerFile::createCommand(const char* filename, int port, const char* description)
+{
+  string md5Val      = "0";
+  string descriptStr = description;;
+  stringstream cmd;
+  cmd << "<createtracker ";
+
+  //Add filename
+  cmd << filename << " ";
+
+  //Add filesize
+  ifstream in(filename, ifstream::ate | ifstream::binary);
+  cmd << in.tellg() << " ";
+  in.close();
+
+  //Add description
+  for(int i=0,size=descriptStr.size(); i<size; i++)
+    if(descriptStr[i]==' ')
+      descriptStr[i] = '_';
+  cmd << descriptStr << " ";
+
+  //Calculate MD5 Checksum (Linux Specific)
+  string md5cmd = "md5sum " + fileDirectory + "/" + filename;
+  FILE* pipe = popen(md5cmd.c_str(),"r");
+  if(pipe != NULL)
+  {
+    unsigned int md5Size = 32;
+    char md5Res[md5Size+1];
+    md5Res[md5Size] = '\0';
+    if(md5Size == fread((void*)md5Res,sizeof(char),md5Size,pipe))
+      md5Val = md5Res;
+    fclose(pipe);
+  }
+  cmd << md5Val << " ";
+
+  //Determine and Add IP Address
+  struct ifreq ifr;
+  int fd = socket(AF_INET, SOCK_DGRAM, 0);
+  ifr.ifr_addr.sa_family = AF_INET; //IPv4
+  strncpy(ifr.ifr_name, "eth0", IFNAMSIZ-1);
+  ioctl(fd, SIOCGIFADDR, &ifr);
+  close(fd);
+  cmd << inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr) << " ";
+
+  //Add Port
+  cmd << port << ">\n";
+
+  return cmd.str().c_str();
 }
