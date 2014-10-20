@@ -126,12 +126,13 @@ void DataListener::listener(int portNum = LISTENPORT) {
 	// accept
 	clientSocket = accept(listenSocket, (struct sockaddr*) &clientAddr, sizeof(clientAddr) )
 	
+	HandleTCPClient();
+	
 	return;
 }
 
-void HandleTCPClient() {
+void DataListener::HandleTCPClient() {
 	
-	char msgBuffer[RCVBUFSIZE];
 	int recvMsgSize = 0;
 	
 	// Receive message from client
@@ -139,9 +140,11 @@ void HandleTCPClient() {
 	
 	while( recvMsgSize > 0 ) {
 		
-		// send comm?
+		// send comm flag?
 		
 		recvMsgSize = recv(clientSocket, msgBuffer, RCVBUFSIZE, 0 );
 		
 	}
+	
+	return;
 }
