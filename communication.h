@@ -65,9 +65,9 @@ class DataReceiver {
 	unsigned long myIP;
 	
 	public:
-	bool listener(int portNum);
-	getData(char* Buffer);
-	bool close();
+	void listener(int portNum);
+	//getData(char* Buffer);
+	//bool close();
 };
 
 
