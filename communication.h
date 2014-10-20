@@ -13,6 +13,8 @@
 using namespace std;
 #define MAXMESGLEN 1024
 #define LISTENQUEUE 1
+#define LISTENPORT 8888
+#define RCVBUFSIZE 4096
 
 // For connecting to another host and sending char data
 class DataSender {
