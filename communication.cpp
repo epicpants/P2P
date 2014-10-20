@@ -91,3 +91,42 @@ short DataSender::transmit(string message = "") {
 	
 	return result;
 }
+
+DataReceiver::DataReceiver( unsigned short listenPort = 0 ){
+	
+	// Initialize server info
+	this->mySocket = 0;
+	this->listenPort = listenPort;
+	this->myIP = INADDR_ANY;
+}
+
+// For listening and receiving data
+bool DataListener::listener(int portNum = 0) {
+	
+	// Allow constructor port num to be changed
+	if( portNum ) listenPort = portNum;
+
+	// Create struct for holding local host's address info
+	struct sockaddr_in localHost;
+
+	// Zero out address struct
+	memset(&localHost, 0, sizeof(localHost));
+
+	// Populate address struct with parameters
+	localHost.sin_family = AF_INET; //IPv4
+	localHost.sin_addr.s_addr = htonl(myIP);
+	localHost.sin_port = htons(listenPort);
+	
+	// create new IPv4 TCP stream socket
+	mySocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
+	
+	// bind to socket
+	bind(mySocket, (struct sockaddr*) &localHost, sizeof(localHost);
+	
+	// listen for incoming connections
+	listen(mySocket, LISTENQUEUE);
+	
+	// accept()
+	
+	return true;
+}
