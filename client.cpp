@@ -50,6 +50,7 @@ void *peerCommandExecute(void *threadid)
 {
   //read in command
   //execute command(aka send piece)
+  unsigned long numberOfPieces=0;
   pthread_exit(NULL);
 }
 
