@@ -45,6 +45,8 @@ pthread_t threads[MAX_THREAD_COUNT];
 unsigned int threadCount = 0;
 TrackerFile tf1;
 vector<string> tracker_files;
+struct hostent *hostServer;
+struct sockaddr_in server_addr;// = { AF_INET, htons( SERVER_PORT ) };
 
 void *peerCommandExecute(void *threadid)
 {
@@ -89,21 +91,25 @@ bool createTracker(string fileName)
   //make tracker file
   //update tracker server
   string createTrackerServerCommand;
-  createTrackerServerCommand = tf1.createCommand(fileName.c_str(), PEER_DATA_PORT, "Boring Description");
+  createTrackerServerCommand = TrackerFile::createCommand(fileName.c_str(), PEER_DATA_PORT, "Boring Description");
+  tf1.create(createTrackerServerCommand.c_str());
   //transmit createTrackerServerCommand to server
   return true;
 }
 
-bool updateTracker()
+bool updateTracker(string fileName)
 {
-  //push updated tracker to server
-  //download new trackers
+  string updateTrackerServerComamand;
+  updateTrackerServerComamand = TrackerFile::updateCommand(fileName.c_str(), PEER_DATA_PORT);
+  //transmit updateTrackerServerComamand
   return true;
 }
 
 bool getList()
 {
   //get list of trackers from server
+  //open connection to server
+  //transmit "REQ LIST"
   return true;
 }
 
@@ -210,6 +216,21 @@ void *getFromPeer(void *threadid)
 
 int main(int argc, char* argv[])
 {
+    //checks to see if the correct number of arguments were passed in
+  if(argc != 2)
+  {
+    cout<<"Usage: "<<argv[0]<<" hostname"<<endl;
+    exit(1);
+  }
+
+  //checks to see if the hostname is valid
+  if( (hostServer = gethostbyname(argv[1]) ) == NULL)
+  {
+    cout<<"host "<<argv[1]<<" not found"<<endl;
+    exit(1);
+  }
+  memcpy( hostServer->h_addr_list[0], (char*)&server_addr.sin_addr, hostServer->h_length );
+
   getTrackerFiles(tracker_files);
   int userinputid = pthread_create(&threads[threadCount], NULL, userInput, NULL);
   threadCount++;
