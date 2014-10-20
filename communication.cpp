@@ -127,6 +127,7 @@ bool DataListener::listener(int portNum = 0) {
 	listen(mySocket, LISTENQUEUE);
 	
 	// accept()
+	accept(sd, (struct sockaddr*)&client_addr, &client_len )
 	
 	return true;
 }
