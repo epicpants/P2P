@@ -92,16 +92,15 @@ short DataSender::transmit(string message = "") {
 	return result;
 }
 
-DataReceiver::DataReceiver(){
-	
+DataReceiver::DataReceiver() {
 	// Initialize server info
-	this->listenSocket = 0;
-	this->clientSocket = 0;
-	this->myIP = INADDR_ANY;
+	listenSocket = 0;
+	clientSocket = 0;
+	myIP = INADDR_ANY;
 }
 
 // For listening and receiving data
-void DataListener::listener(int portNum = LISTENPORT) {
+void DataReceiver::listener(int portNum = LISTENPORT) {
 	
 	// Create struct for holding local host's address info
 	struct sockaddr_in localHost, clientAddr;
@@ -118,20 +117,20 @@ void DataListener::listener(int portNum = LISTENPORT) {
 	listenSocket = socket(PF_INET, SOCK_STREAM, IPPROTO_TCP);
 	
 	// bind to socket
-	bind(listenSocket, (struct sockaddr*) &localHost, sizeof(localHost);
+	bind(listenSocket, (struct sockaddr*) &localHost, sizeof(localHost));
 	
 	// listen for incoming connections
 	listen(listenSocket, LISTENQUEUE);
 	
 	// accept
-	clientSocket = accept(listenSocket, (struct sockaddr*) &clientAddr, sizeof(clientAddr) )
+	clientSocket = accept(listenSocket, (struct sockaddr*) &clientAddr, sizeof(clientAddr) );
 	
 	HandleTCPClient();
 	
 	return;
 }
 
-void DataListener::HandleTCPClient() {
+void DataReceiver::HandleTCPClient() {
 	
 	int recvMsgSize = 0;
 	
