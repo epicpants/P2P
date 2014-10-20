@@ -13,6 +13,7 @@
 #include <netinet/in.h>  /* define internet socket */
 #include <netdb.h>       /* define internet socket */
 #include <sys/stat.h>
+#include <dirent.h>
 #include "tracker_parser.h"
 #include "communication.h"
 #include "md5.h"
@@ -22,13 +23,43 @@ using namespace std;
 #define PEER_COMMAND_PORT 8888
 #define PEER_DATA_PORT 9999
 #define MAX_THREAD_COUNT 1000
+#define PIECE_SIZE 1024
+
+void getTrackerFiles(vector<string> & tracker_list_out);
 
 int peerSocket;
 pthread_t threads[MAX_THREAD_COUNT];
 unsigned int threadCount = 0;
 TrackerFile tf1;
-//vector <
+vector<string> tracker_files;
 
+void getTrackerFiles(vector<string> & tracker_list_out)
+{
+  // Open current directory
+  DIR* current_dir = opendir(".");
+  if(current_dir == NULL) // An error occurred
+  {
+    cerr<<"Error. Failed to find current directory"<<endl;
+  }
+  else // No errors
+  {
+    // Get first file
+    dirent * nextEntry = readdir(current_dir);
+    // While there are more files in the directory
+    while(nextEntry != NULL)
+    {
+      string filename = nextEntry -> d_name;
+      // Find if file ends in .track
+      size_t tracker_found = filename.find(".track");
+      if(tracker_found != string::npos)
+      {
+        // Add filename to list of tracker files
+        tracker_list_out.push_back(filename);
+      }
+      nextEntry = readdir(current_dir);
+    }
+  }
+}
 
 bool createTracker(string fileName)
 {
@@ -38,7 +69,7 @@ bool createTracker(string fileName)
   //update tracker server
   string createTrackerServerCommand;
   createTrackerServerCommand = tf1.createCommand(fileName.c_str(), PEER_DATA_PORT, "Boring Description");
-  cout<<createTrackerServerCommand<<endl;
+  //transmit createTrackerServerCommand to server
   return true;
 }
 
@@ -160,6 +191,7 @@ void *getFromPeer(void *threadid)
 
 int main(int argc, char* argv[])
 {
+  getTrackerFiles(tracker_files);
   int userinputid = pthread_create(&threads[threadCount], NULL, userInput, NULL);
   threadCount++;
   int peerinputid = pthread_create(&threads[threadCount], NULL, peerInput, NULL);
