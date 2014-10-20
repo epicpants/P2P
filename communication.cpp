@@ -101,7 +101,7 @@ DataReceiver::DataReceiver(){
 }
 
 // For listening and receiving data
-void DataListener::listener(int portNum = 8888) {
+void DataListener::listener(int portNum = LISTENPORT) {
 	
 	// Create struct for holding local host's address info
 	struct sockaddr_in localHost, clientAddr;
@@ -127,4 +127,21 @@ void DataListener::listener(int portNum = 8888) {
 	clientSocket = accept(listenSocket, (struct sockaddr*) &clientAddr, sizeof(clientAddr) )
 	
 	return;
+}
+
+void HandleTCPClient() {
+	
+	char msgBuffer[RCVBUFSIZE];
+	int recvMsgSize = 0;
+	
+	// Receive message from client
+	recvMsgSize = recv( clientSocket, msgBuffer, RCVBUFSIZE, 0 );
+	
+	while( recvMsgSize > 0 ) {
+		
+		// send comm?
+		
+		recvMsgSize = recv(clientSocket, msgBuffer, RCVBUFSIZE, 0 );
+		
+	}
 }
