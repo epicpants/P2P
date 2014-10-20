@@ -68,6 +68,8 @@ class DataReceiver {
 	
 	public:
 	void listener(int portNum);
+	void HandleTCPClient();
+	char msgBuffer[RCVBUFSIZE];
 	//getData(char* Buffer);
 	//bool close();
 };
