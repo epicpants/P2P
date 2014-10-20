@@ -41,12 +41,13 @@ struct sendFileData
 void getTrackerFiles(vector<string> & tracker_list_out);
 
 int peerSocket;
+int serverSocket;
 pthread_t threads[MAX_THREAD_COUNT];
 unsigned int threadCount = 0;
 TrackerFile tf1;
 vector<string> tracker_files;
 struct hostent *hostServer;
-struct sockaddr_in server_addr;// = { AF_INET, htons( SERVER_PORT ) };
+struct sockaddr_in server_addr; // = { AF_INET, htons( SERVER_PORT ) };
 
 void *peerCommandExecute(void *threadid)
 {
@@ -129,6 +130,9 @@ void *userInput(void *threadid)
   cout<<"P2P Client Started"<<endl;
   string userCommandString;
   string userCommand;
+
+  string userInputBuffer;
+  string userOutputBuffer;
   string trackerFileName;
   while(1)
   {
@@ -169,6 +173,8 @@ void *peerInput(void *threadid)
   struct sockaddr_in server_addr = { AF_INET, htons( PEER_COMMAND_PORT ) };
   struct sockaddr_in client_addr = { AF_INET };
   unsigned int client_len = sizeof( client_addr );
+  string peerInputBuffer;
+  string peerOutputBuffer;
   
   /* create a stream socket */
   if( ( peerSocket = socket( AF_INET, SOCK_STREAM, 0 ) ) == -1 )
@@ -213,26 +219,56 @@ void *getFromPeer(void *threadid)
   pthread_exit(NULL);
 }
 
+void *userOutput(void *threadid)
+{
+  cout<<"USER OUTPUT THREAD!"<<endl;
+  pthread_exit(NULL);
+}
+
+void *peerOutput(void *threadid)
+{
+  cout<<"PEER OUTPUT THREAD!"<<endl;
+  pthread_exit(NULL);
+}
+
 
 int main(int argc, char* argv[])
 {
     //checks to see if the correct number of arguments were passed in
   if(argc != 2)
   {
-    cout<<"Usage: "<<argv[0]<<" hostname"<<endl;
+    cout<<"Usage: "<<argv[0]<<" ip address"<<endl;
     exit(1);
   }
 
   //checks to see if the hostname is valid
-  if( (hostServer = gethostbyname(argv[1]) ) == NULL)
+  if( (hostServer = gethostbyaddr(argv[1], 4, AF_INET) ) == NULL)
   {
-    cout<<"host "<<argv[1]<<" not found"<<endl;
+    cout<<"server "<<argv[1]<<" not found"<<endl;
     exit(1);
   }
   memcpy( hostServer->h_addr_list[0], (char*)&server_addr.sin_addr, hostServer->h_length );
+  //creating a socket for the client
+  if( (serverSocket=socket(AF_INET, SOCK_STREAM, 0)) == -1)
+  {
+    cout<<"Socket Creation Failure"<<endl;
+    exit(1);
+  }
+  
+  //client connecting to a socket
+  if( (connect( serverSocket,(struct sockaddr*)&server_addr, sizeof(server_addr))) == -1)
+  {
+    cout<<"Connection Failed"<<endl;
+    exit(1);
+  }
+
 
   getTrackerFiles(tracker_files);
+  int useroutputid = pthread_create(&threads[threadCount], NULL, userOutput, NULL);
+  threadCount++;
   int userinputid = pthread_create(&threads[threadCount], NULL, userInput, NULL);
+  threadCount++;
+  int peeroutputid = pthread_create(&threads[threadCount], NULL, peerOutput, NULL);
   threadCount++;
   int peerinputid = pthread_create(&threads[threadCount], NULL, peerInput, NULL);
   threadCount++;
