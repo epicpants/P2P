@@ -12,7 +12,7 @@
 
 using namespace std;
 #define MAXMESGLEN 1024
-#define LISTENQUEUE 10
+#define LISTENQUEUE 1
 
 // For connecting to another host and sending char data
 class DataSender {
@@ -61,14 +61,15 @@ class DataReceiver {
 	
 	private:
 	// for socket file descriptor
-	unsigned short mySocket, listenPort;
+	unsigned short clientSocket, listenSocket;
 	unsigned long myIP;
 	
 	public:
 	bool listener(int portNum);
 	getData(char* Buffer);
 	bool close();
-}
+};
+
 
 // ****** Will discuss later *******
 
