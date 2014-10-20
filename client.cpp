@@ -25,6 +25,19 @@ using namespace std;
 #define MAX_THREAD_COUNT 1000
 #define PIECE_SIZE 1024
 
+struct getFileData
+{
+  string getFileDataFileName;
+};
+
+struct sendFileData
+{
+  string sendFileDataFileName;
+  unsigned long sendFileDataPieceNumber;
+  unsigned int sendFileDataPortNumber;
+  string sendFileDataIPAddress;
+};
+
 void getTrackerFiles(vector<string> & tracker_list_out);
 
 int peerSocket;
@@ -32,6 +45,13 @@ pthread_t threads[MAX_THREAD_COUNT];
 unsigned int threadCount = 0;
 TrackerFile tf1;
 vector<string> tracker_files;
+
+void *peerCommandExecute(void *threadid)
+{
+  //read in command
+  //execute command(aka send piece)
+  pthread_exit(NULL);
+}
 
 void getTrackerFiles(vector<string> & tracker_list_out)
 {
@@ -90,6 +110,8 @@ bool getTracker(string getTrackerFileName)
 {
   //download tracker from server
   //start new thread(getfrompeer) to download file from peers
+  int getTrackerID = pthread_create(&threads[threadCount], NULL, peerCommandExecute, NULL);
+  threadCount++;
   return true;
 }
 
@@ -127,13 +149,6 @@ void *userInput(void *threadid)
     }
   }
 
-}
-
-void *peerCommandExecute(void *threadid)
-{
-  //read in command
-  //execute command(aka send piece)
-  pthread_exit(NULL);
 }
 
 void *peerInput(void *threadid)
