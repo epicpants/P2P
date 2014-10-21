@@ -89,25 +89,25 @@ void *peerInput(void *threadid)
   /* create a stream socket */
   if( ( peerSocket = socket( AF_INET, SOCK_STREAM, 0 ) ) == -1 )
   {
-    cerr << "SERVER: socket failed" << endl;
+    cerr << "Client: socket failed" << endl;
     exit( 1 );
   }
   
   /* bind the socket to an internet port */
   if( bind(peerSocket, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1 )
   {
-    cerr << "SERVER: bind failed" << endl;
+    cerr << "Client: bind failed" << endl;
     exit( 1 );
   }
 
   /* listen for clients */
   if( listen( peerSocket, 10 ) == -1 )
   {
-    cerr << "SERVER: listen failed" << endl;
+    cerr << "Client: listen failed" << endl;
     exit( 1 );
   }
 
-  cout << "SERVER is listening for clients to establish a connection\n";
+  cout << "Client is listening for clients to establish a connection\n";
 
   int temp;
   while((temp = accept(peerSocket, (struct sockaddr*)&client_addr, &client_len )) > 0)
