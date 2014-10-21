@@ -235,7 +235,8 @@ void *runPeer(void *threadid)
   int skt = *(int *)threadid;
   char buffer[1024];
   char response[1024];
-
+  
+  read(skt,buffer,sizeof(buffer));
   stringstream ss(buffer);
   string file_name;
   FILE* file;
