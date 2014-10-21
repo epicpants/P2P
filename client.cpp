@@ -219,7 +219,7 @@ bool getList()
   //close connection
   int useroutputid = pthread_create(&threads[threadCount], NULL, serverinput, NULL);//data from server
   threadCount++;
-  sendServerCommand((void*)"REQ LIST");
+  sendServerCommand((void*)"REQ LIST/n");
   return true;
 }
 
