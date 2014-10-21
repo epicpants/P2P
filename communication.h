@@ -67,6 +67,7 @@ class DataReceiver {
 	unsigned long myIP;
 	
 	public:
+	DataReceiver();
 	void listener(int portNum);
 	void HandleTCPClient();
 	char msgBuffer[RCVBUFSIZE];
