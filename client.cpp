@@ -20,8 +20,7 @@
 using namespace std;
 
 #define SERVER_PORT 7777
-#define PEER_COMMAND_PORT 8888
-#define PEER_DATA_PORT 9999
+#define PEER_PORT 8888
 #define MAX_THREAD_COUNT 1000
 #define PIECE_SIZE 1024
 
@@ -92,7 +91,7 @@ bool createTracker(string fileName)
   //make tracker file
   //update tracker server
   string createTrackerServerCommand;
-  createTrackerServerCommand = TrackerFile::createCommand(fileName.c_str(), PEER_DATA_PORT, "Boring Description");
+  createTrackerServerCommand = TrackerFile::createCommand(fileName.c_str(), PEER_PORT, "Boring Description");
   tf1.create(createTrackerServerCommand.c_str());
   //transmit createTrackerServerCommand to server
   return true;
@@ -101,7 +100,7 @@ bool createTracker(string fileName)
 bool updateTracker(string fileName)
 {
   string updateTrackerServerComamand;
-  updateTrackerServerComamand = TrackerFile::updateCommand(fileName.c_str(), PEER_DATA_PORT);
+  updateTrackerServerComamand = TrackerFile::updateCommand(fileName.c_str(), PEER_PORT);
   //transmit updateTrackerServerComamand
   return true;
 }
@@ -125,7 +124,7 @@ bool getTracker(string getTrackerFileName)
   return true;
 }
 
-void *userInput(void *threadid)
+void *userinput(void *threadid)
 {
   cout<<"P2P Client Started"<<endl;
   string userCommandString;
@@ -166,11 +165,9 @@ void *userInput(void *threadid)
 
 void *peerInput(void *threadid)
 {
-  //open socket
-  //listen for data
-  //start peerCommandExecute Thread 
+  //open socket & listen for data
 
-  struct sockaddr_in server_addr = { AF_INET, htons( PEER_COMMAND_PORT ) };
+  struct sockaddr_in server_addr = { AF_INET, htons( PEER_PORT ) };
   struct sockaddr_in client_addr = { AF_INET };
   unsigned int client_len = sizeof( client_addr );
   string peerInputBuffer;
@@ -215,22 +212,14 @@ void *getFromPeer(void *threadid)
   //recieve data
   //merge data
   //close socket
-  getFileData getFromPeerInfo;
   pthread_exit(NULL);
 }
 
-void *userOutput(void *threadid)
+void *serverinput(void *threadid)
 {
   cout<<"USER OUTPUT THREAD!"<<endl;
   pthread_exit(NULL);
 }
-
-void *peerOutput(void *threadid)
-{
-  cout<<"PEER OUTPUT THREAD!"<<endl;
-  pthread_exit(NULL);
-}
-
 
 int main(int argc, char* argv[])
 {
@@ -262,13 +251,10 @@ int main(int argc, char* argv[])
     exit(1);
   }
 
-
   getTrackerFiles(tracker_files);
-  int useroutputid = pthread_create(&threads[threadCount], NULL, userOutput, NULL);
+  int useroutputid = pthread_create(&threads[threadCount], NULL, serverinput, NULL);
   threadCount++;
-  int userinputid = pthread_create(&threads[threadCount], NULL, userInput, NULL);
-  threadCount++;
-  int peeroutputid = pthread_create(&threads[threadCount], NULL, peerOutput, NULL);
+  int serverinputid = pthread_create(&threads[threadCount], NULL, userinput, NULL);//commands from stdin
   threadCount++;
   int peerinputid = pthread_create(&threads[threadCount], NULL, peerInput, NULL);
   threadCount++;
