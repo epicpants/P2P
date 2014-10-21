@@ -56,11 +56,33 @@ short DataSender::createConn() {
 		// connect to remote host via socket
 		result = connect(mySocket, (struct sockaddr*) &remoteHost,
 			sizeof(remoteHost));
+
+		//create thread for handling simultaneous input & output
+		pthread_t readThread;
+		pthread_create(&readThread, NULL, DataSender::ReplyListener, &mySocket);
 	}
 	
 	return result;
 }
 
+//input from server
+void* DataSender::ReplyListener(void* arg) {
+	
+	int clientSocket = *(int *)arg;
+	
+	int recvMsgLength = read(clientSocket, replyBuffer, sizeof(replyBuffer));
+	
+	while ( recvMsgLength > 0 ) {
+
+		recvMsgLength = read(clientSocket, replyBuffer, sizeof(replyBuffer)
+		
+	}
+	
+	cout<<replyBuffer<<endl;
+	disconnect();
+	pthread_exit(arg);
+	return NULL;
+}
 
 // Desc: Disconnect TCP connection and reset mySocket
 short DataSender::disconnect() {
@@ -100,7 +122,7 @@ DataReceiver::DataReceiver() {
 }
 
 // For listening and receiving data
-void DataReceiver::listener(int portNum = LISTENPORT) {
+void DataReceiver::listener(int portNum = CLIENTPORT) {
 	
 	// Create struct for holding local host's address info
 	struct sockaddr_in localHost, clientAddr;
@@ -147,6 +169,7 @@ void DataReceiver::HandleTCPClient() {
 	
 	return;
 }
+
 
 short DataReceiver::transmit(string message = "") {
 	
