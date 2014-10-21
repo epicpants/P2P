@@ -229,6 +229,21 @@ void *getFromPeer(void *threadid)
 
 int main(int argc, char* argv[])
 {
+  //checks to see if the correct number of arguments were passed in
+  if(argc != 2)
+  {
+    cout<<"Usage: "<<argv[0]<<" ip address"<<endl;
+    exit(1);
+  }
+
+  //checks to see if the hostname is valid
+  if( (hostServer = gethostbyaddr(argv[1], 4, AF_INET) ) == NULL)
+  {
+    cout<<"server "<<argv[1]<<" not found"<<endl;
+    exit(1);
+  }
+  memcpy( hostServer->h_addr_list[0], (char*)&server_addr.sin_addr, hostServer->h_length );
+  
   getTrackerFiles(tracker_files);
   //int useroutputid = pthread_create(&threads[threadCount], NULL, serverinput, NULL);//data from server
  // threadCount++;
