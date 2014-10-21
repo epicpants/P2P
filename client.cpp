@@ -71,7 +71,7 @@ void* sendServerCommand(void* cmd)
   //client connecting to a socket
   if((connect(clientSocket,(struct sockaddr*)&server_addr, sizeof(server_addr))) == -1)
   {
-    cout<<"Connection Failed"<<endl;
+    cout<<"Connection Failed1"<<endl;
     exit(1);
   }
 
@@ -176,13 +176,13 @@ void* sendServerCommand(void* cmd)
     //client connecting to a socket
     if((connect(ps,(struct sockaddr*)&peer_addr, sizeof(peer_addr))) == -1)
     {
-      cout<<"Connection Failed"<<endl;
+      cout<<"Connection Failed2"<<endl;
       exit(1);
     }
 
     strcpy(buffer, "GET ");
     strcat(buffer, fname);
-    strcat(buffer, " 0");
+    //strcat(buffer, " 0");
     write(ps, buffer, sizeof(buffer));
 
 
