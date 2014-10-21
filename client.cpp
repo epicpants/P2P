@@ -128,7 +128,7 @@ void *runPeer(void *threadid)
 
 void *peerInput(void *threadid)
 { 
-  struct sockaddr_in server_addr = { AF_INET, htons( SERVER_PORT ) };
+  struct sockaddr_in server_addr = { AF_INET, htons( PEER_PORT ) };
   struct sockaddr_in client_addr = { AF_INET };
   unsigned int client_len = sizeof( client_addr );
   
@@ -219,7 +219,7 @@ bool getList()
   //close connection
   int useroutputid = pthread_create(&threads[threadCount], NULL, serverinput, NULL);//data from server
   threadCount++;
-  sendServerCommand((void*)"REQ LIST/n");
+  sendServerCommand((void*)"REQ LIST");
   return true;
 }
 
