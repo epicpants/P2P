@@ -140,20 +140,28 @@ void *userinput(void *threadid)
     userCommandStringStream >> userCommand;
     if(userCommand == "createtracker" || userCommand == "CREATETRACKER")
     {
+      cout<<"createtracker"<<endl;
       cout<<"Enter file name to create tracker"<<endl;
       userCommandStringStream >> trackerFileName;
       createTracker(trackerFileName);
     }
     else if (userCommand == "list" || userCommand == "LIST")
     {
+      cout<<"list"<<endl;
       cout<<"Getting list of trackers from server"<<endl;
       getList();
     }
     else if (userCommand == "get" || userCommand == "GET")
     {
-      cout<<"Enter name of tracker file for the file to download"<<endl;
+      cout<<"GET"<<endl;
       userCommandStringStream >> trackerFileName;
       getTracker(trackerFileName);
+    }
+    else if (userCommand == "updatetracker" || userCommand == "UPDATETRACKER")
+    {
+      cout<<"updatetracker"<<endl;
+      userCommandStringStream >> trackerFileName;
+      updateTracker(trackerFileName);
     }
     else
     {
@@ -252,11 +260,11 @@ int main(int argc, char* argv[])
   }
 
   getTrackerFiles(tracker_files);
-  int useroutputid = pthread_create(&threads[threadCount], NULL, serverinput, NULL);
+  int useroutputid = pthread_create(&threads[threadCount], NULL, serverinput, NULL);//data from server
   threadCount++;
   int serverinputid = pthread_create(&threads[threadCount], NULL, userinput, NULL);//commands from stdin
   threadCount++;
-  int peerinputid = pthread_create(&threads[threadCount], NULL, peerInput, NULL);
+  int peerinputid = pthread_create(&threads[threadCount], NULL, peerInput, NULL);//commands & data from peers
   threadCount++;
 
   while(1)
