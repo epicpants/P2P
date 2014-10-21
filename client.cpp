@@ -74,15 +74,15 @@ void* sendServerCommand(void* cmd)
   char buffer[PIECE_SIZE];
   read(clientSocket,buffer,sizeof(buffer));
 
-  if(!strstr(buffer,"create"))
+  if(strstr(buffer,"create"))
   {
     cout << buffer << endl;
   }
-  else if(!strstr(buffer,"update"))
+  else if(strstr(buffer,"update"))
   {
     cout << buffer << endl;
   }
-  else if(!strstr(buffer,"LIST"))
+  else if(strstr(buffer,"LIST"))
   {
     stringstream ss(buffer);
     string tmp,filename;
@@ -94,22 +94,22 @@ void* sendServerCommand(void* cmd)
     for(int f=0; f<numFiles; f++)
     {
       read(clientSocket, buffer, sizeof(buffer));
-      ss.str(""); ss.clear();
-      ss << buffer;
-      ss >> tmp;
-      if(ss.str()!="Error")
+      stringstream sbuf(buffer);
+      sbuf >> tmp;
+      if(tmp!="Error")
       {
-        ss >> filename;
+        sbuf >> filename;
         tracker_files.push_back(filename+".track");
+        cout << filename << endl;
       }
     }
     read(clientSocket, buffer, sizeof(buffer));
-    if(strstr(buffer,"END"))
+    if(!strstr(buffer,"END"))
     {
       cerr << "LIST RESPONSE ERROR" << endl;
     }
   }
-  else if(!strstr(buffer,"GET"))
+  else if(strstr(buffer,"GET"))
   {
 
   }
