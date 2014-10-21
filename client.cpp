@@ -219,6 +219,7 @@ bool getList()
   //close connection
   int useroutputid = pthread_create(&threads[threadCount], NULL, serverinput, NULL);//data from server
   threadCount++;
+  sendServerCommand((void*)"REQ LIST");
   return true;
 }
 
@@ -228,10 +229,12 @@ bool getTracker(string getTrackerFileName)
   //start new thread(getfrompeer) to download file from peers
   getFileData getTrackerData;
   getTrackerData.getFileDataFileName = getTrackerFileName;
+  string getTrackerServerCommand = "GET " + getTrackerFileName;
   int useroutputid = pthread_create(&threads[threadCount], NULL, serverinput, NULL);//data from server
   threadCount++;
   int peerinputid = pthread_create(&threads[threadCount], NULL, peerInput, NULL);//commands & data from peers
   threadCount++;
+  sendServerCommand((void*)getTrackerServerCommand.c_str());
   return true;
 }
 
