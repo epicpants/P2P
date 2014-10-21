@@ -141,10 +141,6 @@ void getTrackerFiles(vector<string> & tracker_list_out)
 
 bool createTracker(string fileName)
 {
-  //check if tracker already exists locally
-  //check if file exists locally
-  //make tracker file
-  //update tracker server
   string createTrackerServerCommand;
   createTrackerServerCommand = TrackerFile::createCommand(fileName.c_str(), PEER_PORT, "Boring Description");
   tf1.create(createTrackerServerCommand.c_str());
