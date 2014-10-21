@@ -49,7 +49,6 @@ vector<string> tracker_files;
 struct hostent *hostServer;
 struct hostent *hostPeer;
 struct sockaddr_in server_addr = { AF_INET, htons( SERVER_PORT ) };
-struct sockaddr_in peer_addr = { AF_INET, htons( PEER_PORT)};
 
 void* sendServerCommand(void* cmd)
 {
@@ -158,6 +157,7 @@ void* sendServerCommand(void* cmd)
 
     // Connecting to peer
     int ps;
+    struct sockaddr_in peer_addr = { AF_INET, htons( PEER_PORT)};
     if( (hostPeer = gethostbyname(peer_ip) ) == NULL)
     {
       cout<<"host not found"<<endl;
@@ -284,7 +284,7 @@ void *runPeer(void *threadid)
 
 void *peerInput(void *threadid)
 { 
-  
+  struct sockaddr_in peer_addr = { AF_INET, htons( PEER_PORT)};
   struct sockaddr_in client_addr = { AF_INET };
   unsigned int client_len = sizeof( client_addr );
   
