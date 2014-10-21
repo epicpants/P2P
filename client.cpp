@@ -46,7 +46,7 @@ unsigned int threadCount = 0;
 TrackerFile tf1;
 vector<string> tracker_files;
 struct hostent *hostServer;
-struct sockaddr_in server_addr; // = { AF_INET, htons( SERVER_PORT ) };
+struct sockaddr_in server_addr = { AF_INET, htons( SERVER_PORT ) };
 
 void *serverinput(void *threadid)
 {
@@ -243,7 +243,7 @@ int main(int argc, char* argv[])
     exit(1);
   }
   memcpy( hostServer->h_addr_list[0], (char*)&server_addr.sin_addr, hostServer->h_length );
-  
+
   getTrackerFiles(tracker_files);
   //int useroutputid = pthread_create(&threads[threadCount], NULL, serverinput, NULL);//data from server
  // threadCount++;
