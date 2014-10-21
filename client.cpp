@@ -37,6 +37,27 @@ struct sendFileData
   string sendFileDataIPAddress;
 };
 
+void* sendServerCommands(void* cmd)
+{
+  int clientSocket;
+
+  //creating a socket for the client
+  if((clientSocket=socket(AF_INET, SOCK_STREAM, 0)) == -1)
+  {
+    cout<<"Socket Creation Failure"<<endl;
+    exit(1);
+  }
+  
+  //client connecting to a socket
+  if((connect(clientSocket,(struct sockaddr*)&server_addr, sizeof(server_addr))) == -1)
+  {
+    cout<<"Connection Failed"<<endl;
+    exit(1);
+  }
+
+  write(clientSocket,*(char*)cmd, PIECE_SIZE);
+}
+
 void getTrackerFiles(vector<string> & tracker_list_out);
 
 int peerSocket;
@@ -131,7 +152,7 @@ bool createTracker(string fileName)
   tf1.create(createTrackerServerCommand.c_str());
   int useroutputid = pthread_create(&threads[threadCount], NULL, serverinput, &serverSocket);//data from server
   threadCount++;
-  //transmit createTrackerServerCommand to server
+  sendServerCommand(createTrackerServerCommand.c_str());
   return true;
 }
 
@@ -141,7 +162,7 @@ bool updateTracker(string fileName)
   updateTrackerServerComamand = TrackerFile::updateCommand(fileName.c_str(), PEER_PORT);
   int useroutputid = pthread_create(&threads[threadCount], NULL, serverinput, NULL);//data from server
   threadCount++;
-  //transmit updateTrackerServerComamand
+  sendServerCommand(updateTrackerServerCommand.c_str());
   return true;
 }
 
