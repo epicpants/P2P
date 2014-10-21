@@ -174,6 +174,7 @@ bool getList()
   //open connection to server
   //transmit "REQ LIST"
   //close connection
+  sendServerCommand((void*)"REQ LIST");
   int useroutputid = pthread_create(&threads[threadCount], NULL, serverinput, NULL);//data from server
   threadCount++;
   return true;
