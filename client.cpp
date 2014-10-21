@@ -209,13 +209,11 @@ void *userinput(void *threadid)
     if(userCommand == "createtracker" || userCommand == "CREATETRACKER")
     {
       cout<<"createtracker"<<endl;
-      cout<<"Enter file name to create tracker"<<endl;
       userCommandStringStream >> trackerFileName;
       createTracker(trackerFileName);
     }
     else if (userCommand == "list" || userCommand == "LIST")
     {
-      cout<<"list"<<endl;
       cout<<"Getting list of trackers from server"<<endl;
       getList();
     }
