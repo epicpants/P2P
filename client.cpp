@@ -37,8 +37,22 @@ struct sendFileData
   string sendFileDataIPAddress;
 };
 
-void* sendServerCommands(void* cmd)
+void* sendServerCommand(void* cmd);
+void getTrackerFiles(vector<string> & tracker_list_out);
+
+int peerSocket;
+int serverSocket;
+pthread_t threads[MAX_THREAD_COUNT];
+unsigned int threadCount = 0;
+TrackerFile tf1;
+vector<string> tracker_files;
+struct hostent *hostServer;
+struct sockaddr_in server_addr = { AF_INET, htons( SERVER_PORT ) };
+
+void* sendServerCommand(void* cmd)
 {
+  char* cmdStr = (char*)cmd;
+
   int clientSocket;
 
   //creating a socket for the client
@@ -55,19 +69,8 @@ void* sendServerCommands(void* cmd)
     exit(1);
   }
 
-  write(clientSocket,*(char*)cmd, PIECE_SIZE);
+  write(clientSocket,cmdStr, PIECE_SIZE);
 }
-
-void getTrackerFiles(vector<string> & tracker_list_out);
-
-int peerSocket;
-int serverSocket;
-pthread_t threads[MAX_THREAD_COUNT];
-unsigned int threadCount = 0;
-TrackerFile tf1;
-vector<string> tracker_files;
-struct hostent *hostServer;
-struct sockaddr_in server_addr = { AF_INET, htons( SERVER_PORT ) };
 
 void *serverinput(void *threadid)
 {
@@ -146,17 +149,17 @@ bool createTracker(string fileName)
   tf1.create(createTrackerServerCommand.c_str());
   int useroutputid = pthread_create(&threads[threadCount], NULL, serverinput, NULL);//data from server
   threadCount++;
-  sendServerCommand(createTrackerServerCommand.c_str());
+  sendServerCommand((void*)createTrackerServerCommand.c_str());
   return true;
 }
 
 bool updateTracker(string fileName)
 {
-  string updateTrackerServerComamand;
-  updateTrackerServerComamand = TrackerFile::updateCommand(fileName.c_str(), PEER_PORT);
+  string updateTrackerServerCommand;
+  updateTrackerServerCommand = TrackerFile::updateCommand(fileName.c_str(), PEER_PORT);
   int useroutputid = pthread_create(&threads[threadCount], NULL, serverinput, NULL);//data from server
   threadCount++;
-  sendServerCommand(updateTrackerServerCommand.c_str());
+  sendServerCommand((void*)updateTrackerServerCommand.c_str());
   return true;
 }
 
