@@ -147,3 +147,16 @@ void DataReceiver::HandleTCPClient() {
 	
 	return;
 }
+
+short DataReceiver::transmit(string message = "") {
+	
+	short result = -1;
+	
+	if( ( message.length() <= MAXMESGLEN ) && ( clientSocket > 0 ) ) {
+		
+		// sends message, converting to C style string
+		result = send(clientSocket, message.c_str(), message.length(), 0);
+	}
+	
+	return result;
+}
