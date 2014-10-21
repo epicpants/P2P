@@ -48,6 +48,48 @@ vector<string> tracker_files;
 struct hostent *hostServer;
 struct sockaddr_in server_addr; // = { AF_INET, htons( SERVER_PORT ) };
 
+void *serverinput(void *threadid)
+{
+  cout<<"Server Input THREAD!"<<endl;
+  pthread_exit(NULL);
+}
+
+void *peerInput(void *threadid)
+{
+  //open socket & listen for data
+
+  struct sockaddr_in server_addr = { AF_INET, htons( PEER_PORT ) };
+  struct sockaddr_in client_addr = { AF_INET };
+  unsigned int client_len = sizeof( client_addr );
+  string peerInputBuffer;
+  string peerOutputBuffer;
+  
+  /* create a stream socket */
+  if( ( peerSocket = socket( AF_INET, SOCK_STREAM, 0 ) ) == -1 )
+  {
+    cerr << "Client: socket failed" << endl;
+    exit( 1 );
+  }
+  
+  /* bind the socket to an internet port */
+  if( bind(peerSocket, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1 )
+  {
+    cerr << "Client: bind failed" << endl;
+    exit( 1 );
+  }
+
+  /* listen for clients */
+  if( listen( peerSocket, 1 ) == -1 )
+  {
+    cerr << "Client: listen failed" << endl;
+    exit( 1 );
+  }
+
+  cout << "Client is listening for Peers to establish a connection\n";
+
+  int temp = accept(peerSocket, (struct sockaddr*)&client_addr, &client_len );  
+}
+
 void getTrackerFiles(vector<string> & tracker_list_out)
 {
   // Open current directory
@@ -85,6 +127,8 @@ bool createTracker(string fileName)
   string createTrackerServerCommand;
   createTrackerServerCommand = TrackerFile::createCommand(fileName.c_str(), PEER_PORT, "Boring Description");
   tf1.create(createTrackerServerCommand.c_str());
+  int useroutputid = pthread_create(&threads[threadCount], NULL, serverinput, NULL);//data from server
+  threadCount++;
   //transmit createTrackerServerCommand to server
   return true;
 }
@@ -93,6 +137,8 @@ bool updateTracker(string fileName)
 {
   string updateTrackerServerComamand;
   updateTrackerServerComamand = TrackerFile::updateCommand(fileName.c_str(), PEER_PORT);
+  int useroutputid = pthread_create(&threads[threadCount], NULL, serverinput, NULL);//data from server
+  threadCount++;
   //transmit updateTrackerServerComamand
   return true;
 }
@@ -102,6 +148,8 @@ bool getList()
   //open connection to server
   //transmit "REQ LIST"
   //close connection
+  int useroutputid = pthread_create(&threads[threadCount], NULL, serverinput, NULL);//data from server
+  threadCount++;
   return true;
 }
 
@@ -111,6 +159,10 @@ bool getTracker(string getTrackerFileName)
   //start new thread(getfrompeer) to download file from peers
   getFileData getTrackerData;
   getTrackerData.getFileDataFileName = getTrackerFileName;
+  int useroutputid = pthread_create(&threads[threadCount], NULL, serverinput, NULL);//data from server
+  threadCount++;
+  int peerinputid = pthread_create(&threads[threadCount], NULL, peerInput, NULL);//commands & data from peers
+  threadCount++;
   return true;
 }
 
@@ -150,6 +202,8 @@ void *userinput(void *threadid)
     else if (userCommand == "updatetracker" || userCommand == "UPDATETRACKER")
     {
       cout<<"updatetracker"<<endl;
+      // int peerinputid = pthread_create(&threads[threadCount], NULL, peerInput, NULL);//commands & data from peers
+      // threadCount++;<<"updatetracker"<<endl;
       userCommandStringStream >> trackerFileName;
       updateTracker(trackerFileName);
     }
@@ -158,44 +212,9 @@ void *userinput(void *threadid)
 
     }
   }
-
 }
 
-void *peerInput(void *threadid)
-{
-  //open socket & listen for data
 
-  struct sockaddr_in server_addr = { AF_INET, htons( PEER_PORT ) };
-  struct sockaddr_in client_addr = { AF_INET };
-  unsigned int client_len = sizeof( client_addr );
-  string peerInputBuffer;
-  string peerOutputBuffer;
-  
-  /* create a stream socket */
-  if( ( peerSocket = socket( AF_INET, SOCK_STREAM, 0 ) ) == -1 )
-  {
-    cerr << "Client: socket failed" << endl;
-    exit( 1 );
-  }
-  
-  /* bind the socket to an internet port */
-  if( bind(peerSocket, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1 )
-  {
-    cerr << "Client: bind failed" << endl;
-    exit( 1 );
-  }
-
-  /* listen for clients */
-  if( listen( peerSocket, 1 ) == -1 )
-  {
-    cerr << "Client: listen failed" << endl;
-    exit( 1 );
-  }
-
-  cout << "Client is listening for Peers to establish a connection\n";
-
-  int temp = accept(peerSocket, (struct sockaddr*)&client_addr, &client_len );  
-}
 
 void *getFromPeer(void *threadid)
 {
@@ -208,21 +227,15 @@ void *getFromPeer(void *threadid)
   pthread_exit(NULL);
 }
 
-void *serverinput(void *threadid)
-{
-  cout<<"Server Input THREAD!"<<endl;
-  pthread_exit(NULL);
-}
-
 int main(int argc, char* argv[])
 {
   getTrackerFiles(tracker_files);
-  int useroutputid = pthread_create(&threads[threadCount], NULL, serverinput, NULL);//data from server
-  threadCount++;
+  //int useroutputid = pthread_create(&threads[threadCount], NULL, serverinput, NULL);//data from server
+ // threadCount++;
   int serverinputid = pthread_create(&threads[threadCount], NULL, userinput, NULL);//commands from stdin
   threadCount++;
-  int peerinputid = pthread_create(&threads[threadCount], NULL, peerInput, NULL);//commands & data from peers
-  threadCount++;
+ // int peerinputid = pthread_create(&threads[threadCount], NULL, peerInput, NULL);//commands & data from peers
+ // threadCount++;
 
   while(1)
   {
