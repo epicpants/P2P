@@ -70,6 +70,7 @@ class DataReceiver {
 	DataReceiver();
 	void listener(int portNum);
 	void HandleTCPClient();
+	short transmit(string message = "");
 	char msgBuffer[RCVBUFSIZE];
 	//getData(char* Buffer);
 	//bool close();
