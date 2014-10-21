@@ -121,15 +121,26 @@ void* sendServerCommand(void* cmd)
   {
     remove(trackerFileName.c_str());
     FILE* trackerFile = fopen(trackerFileName.c_str(),"w");
+    string newBuf;
+    size_t loc;
 
     if(trackerFile != NULL)
     {
       read(clientSocket, buffer, sizeof(buffer));
       do
       {
-        fwrite((void*)buffer,sizeof(char),PIECE_SIZE,trackerFile);
+cout << "WRITING TO FILE" << endl;
+        newBuf = buffer;
+        if(newBuf.size() < PIECE_SIZE)
+        {
+cout << "FOUND NOTHEIHR" << endl;
+          fwrite((void*)buffer,sizeof(char),newBuf.size(),trackerFile);
+        }
+        else
+          fwrite((void*)buffer,sizeof(char),PIECE_SIZE,trackerFile);
         read(clientSocket, buffer, sizeof(buffer));
-      } while(!strstr(buffer,"REP LIST END"));
+      } while(!strstr(buffer,"REP GET END"));
+cout << "WE DONES" << endl;
       fclose(trackerFile);
     }
   }

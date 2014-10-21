@@ -113,7 +113,7 @@ void* runPeer(void* arg)
   
   length = read(skt, buffer, sizeof(buffer));
   buffer[length] = '\0';
-  if((!strstr(buffer, "REQ LIST"))||(!strstr(buffer, "req list"))||(!strstr(buffer, "<REQ LIST>"))||(!strstr(buffer, "<REQ LIST>\n"))){//list command received
+  if((strstr(buffer, "REQ LIST"))||(strstr(buffer, "req list"))||(strstr(buffer, "<REQ LIST>"))||(strstr(buffer, "<REQ LIST>\n"))){//list command received
     cout<<"Client requested tracker file list"<<endl;
     vector<string> tracker_files;
     getTrackerFiles(tracker_files);
@@ -202,6 +202,7 @@ void* runPeer(void* arg)
     }
     fclose(file);
     string contents = file_contents;
+    free(file_contents);
     MD5 md5(contents);
     const char* file_md5 = md5.hexdigest().c_str();
     strcpy(response, "REP GET END ");
