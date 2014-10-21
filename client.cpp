@@ -77,7 +77,7 @@ void *serverinput(void *threadid)
 
 void *runPeer(void *threadid)
 {
-
+  pthread_exit(NULL);
 }
 
 void *peerInput(void *threadid)
