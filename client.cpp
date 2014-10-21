@@ -107,9 +107,9 @@ bool updateTracker(string fileName)
 
 bool getList()
 {
-  //get list of trackers from server
   //open connection to server
   //transmit "REQ LIST"
+  //close connection
   return true;
 }
 
