@@ -13,7 +13,7 @@ int main( int argc, char* argv[] )
 { 
     int sd; 
     struct sockaddr_in server_addr = { AF_INET, htons( SERVER_PORT ) }; 
-    char buf[512]; 
+    char buf[1024]; 
     struct hostent *hp; 
  
     if( argc != 2 ) 
@@ -45,14 +45,16 @@ int main( int argc, char* argv[] )
       exit( 1 ); 
     } 
  
-    printf("connect() successful! will send a message to server\n"); 
-    printf("Input a string:\n" ); 
+    printf("connect() successful!\n"); 
+    printf("Input get file command\n" ); 
  
     while( scanf( "%s", buf) != EOF) 
     { 
       write(sd, buf, sizeof(buf)); 
+
       read(sd, buf, sizeof(buf)); 
-      printf("SERVER ECHOED: %s\n", buf); 
+      
+      printf("Download Successful"); 
     } 
  
     close(sd); 

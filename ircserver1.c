@@ -7,7 +7,7 @@
 #include <netinet/in.h>  /* define internet socket */
 #include <netdb.h>       /* define internet socket */
 
-#define SERVER_PORT 9999        /* define a server port number */
+#define SERVER_PORT 7777        /* define a server port number */
 
 int main()
 {
