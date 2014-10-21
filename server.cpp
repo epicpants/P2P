@@ -113,7 +113,7 @@ void* runPeer(void* arg)
   
   length = read(skt, buffer, sizeof(buffer));
   buffer[length] = '\0';
-  if((!strcmp(buffer, "REQ LIST"))||(!strcmp(buffer, "req list"))||(!strcmp(buffer, "<REQ LIST>"))||(!strcmp(buffer, "<REQ LIST>\n"))){//list command received
+  if((!strstr(buffer, "REQ LIST"))||(!strstr(buffer, "req list"))||(!strstr(buffer, "<REQ LIST>"))||(!strstr(buffer, "<REQ LIST>\n"))){//list command received
     cout<<"Client requested tracker file list"<<endl;
     vector<string> tracker_files;
     getTrackerFiles(tracker_files);

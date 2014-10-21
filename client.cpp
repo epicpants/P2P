@@ -53,6 +53,10 @@ void* sendServerCommand(void* cmd)
 {
   char* cmdStr = (char*)cmd;
 
+  stringstream ss(cmdStr);
+  string trackerFileName;
+  ss >> trackerFileName >> trackerFileName;
+
   int clientSocket;
 
   //creating a socket for the client
@@ -100,7 +104,7 @@ void* sendServerCommand(void* cmd)
       {
         sbuf >> filename;
         tracker_files.push_back(filename+".track");
-        cout << filename << endl;
+        cout << filename << ".track" << endl;
       }
     }
     read(clientSocket, buffer, sizeof(buffer));
@@ -108,10 +112,26 @@ void* sendServerCommand(void* cmd)
     {
       cerr << "LIST RESPONSE ERROR" << endl;
     }
+    else
+    {
+      cout << "Received list of tracker files. TADAH!" << endl;
+    }
   }
   else if(strstr(buffer,"GET"))
   {
+    remove(trackerFileName.c_str());
+    FILE* trackerFile = fopen(trackerFileName.c_str(),"w");
 
+    if(trackerFile != NULL)
+    {
+      read(clientSocket, buffer, sizeof(buffer));
+      do
+      {
+        fwrite((void*)buffer,sizeof(char),PIECE_SIZE,trackerFile);
+        read(clientSocket, buffer, sizeof(buffer));
+      } while(!strstr(buffer,"REP LIST END"));
+      fclose(trackerFile);
+    }
   }
 }
 
