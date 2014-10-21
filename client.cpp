@@ -48,14 +48,6 @@ vector<string> tracker_files;
 struct hostent *hostServer;
 struct sockaddr_in server_addr; // = { AF_INET, htons( SERVER_PORT ) };
 
-void *peerCommandExecute(void *threadid)
-{
-  //read in command
-  //execute command(aka send piece)
-  unsigned long numberOfPieces=0;
-  pthread_exit(NULL);
-}
-
 void getTrackerFiles(vector<string> & tracker_list_out)
 {
   // Open current directory
@@ -119,8 +111,6 @@ bool getTracker(string getTrackerFileName)
   //start new thread(getfrompeer) to download file from peers
   getFileData getTrackerData;
   getTrackerData.getFileDataFileName = getTrackerFileName;
-  int getTrackerID = pthread_create(&threads[threadCount], NULL, peerCommandExecute, NULL);
-  threadCount++;
   return true;
 }
 
@@ -204,12 +194,7 @@ void *peerInput(void *threadid)
 
   cout << "Client is listening for Peers to establish a connection\n";
 
-  int temp;
-  while((temp = accept(peerSocket, (struct sockaddr*)&client_addr, &client_len )) > 0)
-  {
-    pthread_create(&threads[threadCount], NULL, peerCommandExecute, &temp);
-    threadCount++;
-  }
+  int temp = accept(peerSocket, (struct sockaddr*)&client_addr, &client_len );  
 }
 
 void *getFromPeer(void *threadid)
@@ -225,40 +210,12 @@ void *getFromPeer(void *threadid)
 
 void *serverinput(void *threadid)
 {
-  cout<<"USER OUTPUT THREAD!"<<endl;
+  cout<<"Server Input THREAD!"<<endl;
   pthread_exit(NULL);
 }
 
 int main(int argc, char* argv[])
 {
-    //checks to see if the correct number of arguments were passed in
-  if(argc != 2)
-  {
-    cout<<"Usage: "<<argv[0]<<" ip address"<<endl;
-    exit(1);
-  }
-
-  //checks to see if the hostname is valid
-  if( (hostServer = gethostbyaddr(argv[1], 4, AF_INET) ) == NULL)
-  {
-    cout<<"server "<<argv[1]<<" not found"<<endl;
-    exit(1);
-  }
-  memcpy( hostServer->h_addr_list[0], (char*)&server_addr.sin_addr, hostServer->h_length );
-  //creating a socket for the client
-  if( (serverSocket=socket(AF_INET, SOCK_STREAM, 0)) == -1)
-  {
-    cout<<"Socket Creation Failure"<<endl;
-    exit(1);
-  }
-  
-  //client connecting to a socket
-  if( (connect( serverSocket,(struct sockaddr*)&server_addr, sizeof(server_addr))) == -1)
-  {
-    cout<<"Connection Failed"<<endl;
-    exit(1);
-  }
-
   getTrackerFiles(tracker_files);
   int useroutputid = pthread_create(&threads[threadCount], NULL, serverinput, NULL);//data from server
   threadCount++;
@@ -269,7 +226,7 @@ int main(int argc, char* argv[])
 
   while(1)
   {
-    //Allows the two main threads to do the real work
+    //Allows the threads to do the real work
   }
 
   return 0;
