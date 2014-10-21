@@ -47,7 +47,9 @@ unsigned int threadCount = 0;
 TrackerFile tf1;
 vector<string> tracker_files;
 struct hostent *hostServer;
+struct hostent *hostPeer;
 struct sockaddr_in server_addr = { AF_INET, htons( SERVER_PORT ) };
+struct sockaddr_in peer_addr = { AF_INET, htons( PEER_PORT)};
 
 void* sendServerCommand(void* cmd)
 {
@@ -122,27 +124,96 @@ void* sendServerCommand(void* cmd)
     remove(trackerFileName.c_str());
     FILE* trackerFile = fopen(trackerFileName.c_str(),"w");
     string newBuf;
-    size_t loc;
 
     if(trackerFile != NULL)
     {
       read(clientSocket, buffer, sizeof(buffer));
       do
       {
-cout << "WRITING TO FILE" << endl;
+        cout << "WRITING TO FILE" << endl;
         newBuf = buffer;
         if(newBuf.size() < PIECE_SIZE)
         {
-cout << "FOUND NOTHEIHR" << endl;
           fwrite((void*)buffer,sizeof(char),newBuf.size(),trackerFile);
         }
         else
           fwrite((void*)buffer,sizeof(char),PIECE_SIZE,trackerFile);
         read(clientSocket, buffer, sizeof(buffer));
       } while(!strstr(buffer,"REP GET END"));
-cout << "WE DONES" << endl;
+      cout << "Finished download" << endl;
       fclose(trackerFile);
     }
+
+
+    TrackerFile tfile;
+    const char* tname = trackerFileName.c_str();
+    tfile.parseTrackerFile(tname);
+    const char* fname = tfile.getFilename().c_str();
+    int numHosts = tfile.getNumHosts();
+    long filesize = tfile.getFilesize();
+    unsigned long num_chunks = ((filesize - 1) / (PIECE_SIZE)) + 1;
+    HostInfo peerHost = tfile[0];
+    const char* peer_ip = peerHost.ipaddr.c_str();
+    int peer_port = peerHost.port;
+
+    // Connecting to peer
+    int ps;
+    if( (hostPeer = gethostbyname(peer_ip) ) == NULL)
+    {
+      cout<<"host not found"<<endl;
+      exit(1);
+    }
+
+    memcpy( hostPeer->h_addr_list[0], (char*)&peer_addr.sin_addr, hostPeer->h_length );
+
+    //creating a socket for the client
+    if((ps=socket(AF_INET, SOCK_STREAM, 0)) == -1)
+    {
+      cout<<"Socket Creation Failure"<<endl;
+      exit(1);
+    }
+    
+    //client connecting to a socket
+    if((connect(ps,(struct sockaddr*)&peer_addr, sizeof(peer_addr))) == -1)
+    {
+      cout<<"Connection Failed"<<endl;
+      exit(1);
+    }
+
+    strcpy(buffer, "GET ");
+    strcat(buffer, fname);
+    strcat(buffer, " 0");
+    write(ps, buffer, sizeof(buffer));
+
+
+
+    // NOW READ IN CHUNKS
+
+    remove(fname);
+    FILE* peerFile = fopen(fname,"wb");
+    string newBuf2;
+    //size_t loc2;
+
+    if(peerFile != NULL)
+    {
+      read(ps, buffer, sizeof(buffer));
+      do
+      {
+        cout << "WRITING TO FILE" << endl;
+        newBuf2 = buffer;
+        if(newBuf2.size() < PIECE_SIZE)
+        {
+          fwrite((void*)buffer,sizeof(char),newBuf2.size(),peerFile);
+        }
+        else
+          fwrite((void*)buffer,sizeof(char),PIECE_SIZE,peerFile);
+        read(ps, buffer, sizeof(buffer));
+      } while(!strstr(buffer,"REP GET END"));
+      cout << "Finished download" << endl;
+      fclose(peerFile);
+    }
+
+
   }
 }
 
@@ -154,6 +225,59 @@ void *serverinput(void *threadid)
 
 void *runPeer(void *threadid)
 {
+  // Code for parsing peer input command
+
+  if(threadid == NULL)
+  {
+    cerr << "Thread received null argument" << endl;
+  }
+  
+  int skt = *(int *)threadid;
+  char buffer[1024];
+  char response[1024];
+
+  stringstream ss(buffer);
+  string file_name;
+  FILE* file;
+  long tracker_filesize;
+  char* file_contents;
+  ss >> file_name >> file_name;
+  cout << "Client requested GET for " << file_name << endl;
+  strcpy(response, "REP GET BEGIN");
+  write(skt, response, sizeof(response));
+  
+  file = fopen(file_name.c_str(), "rb");
+  if(file != NULL)
+  {
+    fseek(file, 0L, SEEK_END);
+    tracker_filesize = ftell(file);
+    rewind(file);
+    long bytes_read = 0;
+    file_contents = (char*) malloc(sizeof(char) * tracker_filesize);
+    while(bytes_read < tracker_filesize)
+    {
+      if(bytes_read + PIECE_SIZE > tracker_filesize)
+      {
+        bytes_read += fread(response, sizeof(char), tracker_filesize % PIECE_SIZE, file);
+        response[tracker_filesize % PIECE_SIZE] = '\0';
+      }
+      else
+      {
+        bytes_read += fread(response, sizeof(char), PIECE_SIZE, file);
+      } 
+      write(skt, response, sizeof(response));
+      strcat(file_contents, response);
+    }
+  }
+  fclose(file);
+  string contents = file_contents;
+  free(file_contents);
+  //MD5 md5(contents);
+  //const char* file_md5 = md5.hexdigest().c_str();
+  strcpy(response, "REP GET END");
+  //strcat(response, file_md5);
+  write(skt, response, sizeof(response));
+
   pthread_exit(NULL);
 }
 
