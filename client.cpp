@@ -388,8 +388,8 @@ bool getTracker(string getTrackerFileName)
   string getTrackerServerCommand = "GET " + getTrackerFileName;
   int useroutputid = pthread_create(&threads[threadCount], NULL, serverinput, NULL);//data from server
   threadCount++;
-  int peerinputid = pthread_create(&threads[threadCount], NULL, peerInput, NULL);//commands & data from peers
-  threadCount++;
+  //int peerinputid = pthread_create(&threads[threadCount], NULL, peerInput, NULL);//commands & data from peers
+  //threadCount++;
   sendServerCommand((void*)getTrackerServerCommand.c_str());
   return true;
 }
@@ -481,8 +481,8 @@ int main(int argc, char* argv[])
  // threadCount++;
   int serverinputid = pthread_create(&threads[threadCount], NULL, userinput, NULL);//commands from stdin
   threadCount++;
- // int peerinputid = pthread_create(&threads[threadCount], NULL, peerInput, NULL);//commands & data from peers
- // threadCount++;
+  int peerinputid = pthread_create(&threads[threadCount], NULL, peerInput, NULL);//commands & data from peers
+  threadCount++;
 
   while(1)
   {
