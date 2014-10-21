@@ -70,6 +70,49 @@ void* sendServerCommand(void* cmd)
   }
 
   write(clientSocket,cmdStr, PIECE_SIZE);
+
+  char buffer[PIECE_SIZE];
+  read(clientSocket,buffer,sizeof(buffer));
+
+  if(!strstr(buffer,"create"))
+  {
+    cout << buffer << endl;
+  }
+  else if(!strstr(buffer,"update"))
+  {
+    cout << buffer << endl;
+  }
+  else if(!strstr(buffer,"LIST"))
+  {
+    stringstream ss(buffer);
+    string tmp,filename;
+    int numFiles;
+    ss >> tmp >> tmp >> numFiles;
+
+    tracker_files.clear();
+
+    for(int f=0; f<numFiles; f++)
+    {
+      read(clientSocket, buffer, sizeof(buffer));
+      ss.str(""); ss.clear();
+      ss << buffer;
+      ss >> tmp;
+      if(ss.str()!="Error")
+      {
+        ss >> filename;
+        tracker_files.push_back(filename+".track");
+      }
+    }
+    read(clientSocket, buffer, sizeof(buffer));
+    if(strstr(buffer,"END"))
+    {
+      cerr << "LIST RESPONSE ERROR" << endl;
+    }
+  }
+  else if(!strstr(buffer,"GET"))
+  {
+
+  }
 }
 
 void *serverinput(void *threadid)
