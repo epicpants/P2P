@@ -10,10 +10,14 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
+#include <signal.h>
+#include <cstdlib>
+
 using namespace std;
 #define MAXMESGLEN 1024
 #define LISTENQUEUE 1
-#define LISTENPORT 8888
+#define SERVERPORT 7777
+#define CLIENTPORT 8888
 #define RCVBUFSIZE 4096
 
 // For connecting to another host and sending char data
@@ -23,8 +27,11 @@ class DataSender {
 	// for socket file descriptor
 	unsigned short mySocket, serverPort;
 	string serverIP;
+	static void* ReplyListener(void* arg);
 	
 	public:
+	
+	char replyBuffer[RCVBUFSIZE];
 	
 	// Class constructor
 	DataSender(string serverIP = "", unsigned short serverPort = 0);
