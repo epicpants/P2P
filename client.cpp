@@ -78,15 +78,16 @@ void *serverinput(void *threadid)
   pthread_exit(NULL);
 }
 
-void *peerInput(void *threadid)
+void *runPeer(void *threadid)
 {
-  //open socket & listen for data
+  pthread_exit(NULL);
+}
 
-  struct sockaddr_in server_addr = { AF_INET, htons( PEER_PORT ) };
+void *peerInput(void *threadid)
+{ 
+  struct sockaddr_in server_addr = { AF_INET, htons( SERVER_PORT ) };
   struct sockaddr_in client_addr = { AF_INET };
   unsigned int client_len = sizeof( client_addr );
-  string peerInputBuffer;
-  string peerOutputBuffer;
   
   /* create a stream socket */
   if( ( peerSocket = socket( AF_INET, SOCK_STREAM, 0 ) ) == -1 )
@@ -103,15 +104,20 @@ void *peerInput(void *threadid)
   }
 
   /* listen for clients */
-  if( listen( peerSocket, 1 ) == -1 )
+  if( listen( peerSocket, 10 ) == -1 )
   {
     cerr << "Client: listen failed" << endl;
     exit( 1 );
   }
 
-  cout << "Client is listening for Peers to establish a connection\n";
+  cout << "Client is listening for clients to establish a connection\n";
 
-  int temp = accept(peerSocket, (struct sockaddr*)&client_addr, &client_len );  
+  int temp;
+  while((temp = accept(peerSocket, (struct sockaddr*)&client_addr, &client_len )) > 0)
+  {  
+  pthread_t peerThread;
+  pthread_create(&peerThread, NULL, runPeer, &temp);
+  }
 }
 
 void getTrackerFiles(vector<string> & tracker_list_out)
@@ -147,7 +153,7 @@ bool createTracker(string fileName)
   string createTrackerServerCommand;
   createTrackerServerCommand = TrackerFile::createCommand(fileName.c_str(), PEER_PORT, "Boring Description");
   tf1.create(createTrackerServerCommand.c_str());
-  int useroutputid = pthread_create(&threads[threadCount], NULL, serverinput, NULL);//data from server
+  int useroutputid = pthread_create(&threads[threadCount], NULL, serverinput, &serverSocket);//data from server
   threadCount++;
   sendServerCommand((void*)createTrackerServerCommand.c_str());
   return true;
