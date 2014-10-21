@@ -338,11 +338,17 @@ int main(int argc, char* argv[])
   }
 
   //checks to see if the hostname is valid
-  if( (hostServer = gethostbyaddr(argv[1], 4, AF_INET) ) == NULL)
+  /*if( (hostServer = gethostbyaddr(argv[1], 4, AF_INET) ) == NULL)
   {
     cout<<"server "<<argv[1]<<" not found"<<endl;
     exit(1);
+  }*/
+  if( (hostServer = gethostbyname(argv[1]) ) == NULL)
+  {
+    cout<<"host "<<argv[1]<<" not found"<<endl;
+    exit(1);
   }
+
   memcpy( hostServer->h_addr_list[0], (char*)&server_addr.sin_addr, hostServer->h_length );
 
   getTrackerFiles(tracker_files);
