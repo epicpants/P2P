@@ -1,18 +1,5 @@
-/************************************************************************/ 
-/*   PROGRAM NAME: client.c  (works with serverX.c)                     */ 
-/*                                                                      */ 
-/*   Client creates a socket to connect to Server.                      */ 
-/*   When the communication established, Client writes data to server   */ 
-/*   and echoes the response from Server.                               */ 
-/*                                                                      */ 
-/*   To run this program, first compile the server_ex.c and run it      */ 
-/*   on a server machine. Then run the client program on another        */ 
-/*   machine.                                                           */ 
-/*                                                                      */ 
 /*   COMPILE:    gcc -o client client.c -lnsl                           */ 
 /*   TO RUN:     client  server-machine-name                            */ 
-/*                                                                      */ 
-/************************************************************************/ 
  
 #include <stdio.h> 
 #include <sys/types.h> 

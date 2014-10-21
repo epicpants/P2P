@@ -1,25 +1,4 @@
-/************************************************************************/
-/*   PROGRAM NAME: server2.c  (works with client.c)                     */
-/*                                                                      */
-/*   Server creates a socket to listen for the connection from Client   */
-/*   When the communication established, Server echoes data from Client */
-/*   and writes them back.                                              */
-/*                                                                      */
-/*   Using socket() to create an endpoint for communication. It         */
-/*   returns socket descriptor. Stream socket (SOCK_STREAM) is used here*/
-/*   as opposed to a Datagram Socket (SOCK_DGRAM)                       */  
-/*   Using bind() to bind/assign a name to an unnamed socket.           */
-/*   Using listen() to listen for connections on a socket.              */
-/*   Using accept() to accept a connection on a socket. It returns      */
-/*   the descriptor for the accepted socket.                            */
-/*                                                                      */
-/*   To run this program, first compile the server_ex.c and run it      */
-/*   on a server machine. Then run the client program on another        */
-/*   machine.                                                           */
-/*                                                                      */
 /*   LINUX:      gcc -o server2  server2.c -lnsl                         */
-/*                                                                      */
-/************************************************************************/
 
 
 #include <stdio.h>
@@ -37,7 +16,7 @@ int main()
     struct sockaddr_in server_addr = { AF_INET, htons( SERVER_PORT ) };
     struct sockaddr_in client_addr = { AF_INET };
     int client_len = sizeof( client_addr );
-    char buf[512], *host;
+    char buf[1024], *host;
 
     /* create a stream socket */
     if( ( sd = socket( AF_INET, SOCK_STREAM, 0 ) ) == -1 )
