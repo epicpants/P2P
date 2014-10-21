@@ -284,7 +284,7 @@ void *runPeer(void *threadid)
 
 void *peerInput(void *threadid)
 { 
-  struct sockaddr_in server_addr = { AF_INET, htons( PEER_PORT ) };
+  
   struct sockaddr_in client_addr = { AF_INET };
   unsigned int client_len = sizeof( client_addr );
   
@@ -296,7 +296,7 @@ void *peerInput(void *threadid)
   }
   
   /* bind the socket to an internet port */
-  if( bind(peerSocket, (struct sockaddr*)&server_addr, sizeof(server_addr)) == -1 )
+  if( bind(peerSocket, (struct sockaddr*)&peer_addr, sizeof(peer_addr)) == -1 )
   {
     cerr << "Client: bind failed" << endl;
     exit( 1 );
