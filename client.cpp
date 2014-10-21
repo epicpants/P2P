@@ -279,7 +279,7 @@ void *userinput(void *threadid)
     }
     else
     {
-
+      cout<<"Command not recognized"<<endl;
     }
   }
 }
