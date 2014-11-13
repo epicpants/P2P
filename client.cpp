@@ -1,3 +1,29 @@
+#include <iostream>
+#include <sstream>
+#include <pthread.h> 
+#include <signal.h>
+#include <cstdlib>
+#include <stdio.h>
+#include <cstring>
+#include <string>
+#include <unistd.h>
+#include <vector>
+#include <sys/types.h>
+#include <sys/socket.h>  /* define socket */
+#include <netinet/in.h>  /* define internet socket */
+#include <netdb.h>       /* define internet socket */
+#include <sys/stat.h>
+#include <dirent.h>
+#include "tracker_parser.h"
+#include "communication.h"
+#include "md5.h"
+using namespace std;
+
+#define SERVER_PORT 7777
+#define PEER_PORT 8888
+#define MAX_THREAD_COUNT 1000
+#define PIECE_SIZE 1024
+
 //create thread for handling simultaneous input & output
 pthread_t gatherThread;
 pthread_mutex_t mutex=PTHREAD_MUTEX_INITIALIZER;
