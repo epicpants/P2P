@@ -89,3 +89,19 @@ void getSegment(void* arg)
 	
 	pthread_exit(0);
 }
+
+
+int main(int argc, char* argv[])
+{
+  //checks to see if the correct number of arguments were passed in
+  if(argc != 2)
+  {
+    cout<<"Usage: "<<argv[0]<<" ip address"<<endl;
+    exit(1);
+  }
+
+  while(1)
+  {
+    
+  }
+}
