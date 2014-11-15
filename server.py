@@ -1,23 +1,54 @@
 import socket
+import thread
 
 #SERVER_IP = socket.gethostbyname(socket.getfqdn())
 #SERVER_IP = socket.gethostname()
 SERVER_PORT = 7777
 CHUNK_SIZE = 1024
 
-print "Starting server, hostname = {}".format(socket.gethostname())
-#print SERVER_IP
-sd = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-print "Binding socket to port 7777"
-sd.bind(('', SERVER_PORT))
-print "Listening for clients..."
-sd.listen(1)
 
-(conn, addr) = sd.accept()
-print 'Connection address:', addr
-#while True:
-data = conn.recv(CHUNK_SIZE)
-    #if not data: break
-print "received data:", data
-    #conn.send(data)  # echo
-conn.close()
+def list_command(conn, addr, command):
+    print "Received list command from {}".format(addr[0])
+
+
+def get_command(conn, addr, command):
+    print "Received get command from {}".format(addr[0])
+
+
+def createtracker(conn, addr, command):
+    print "Received createtracker command from {}".format(addr[0])
+
+
+def updatetracker(conn, addr, command):
+    print "Received updatetracker command from {}".format(addr[0])
+
+
+def handle_client(client_conn, client_addr):
+    data = client_conn.recv(CHUNK_SIZE)
+    if data:
+        if data.lower() == "req list" or data.lower() == "<req list>":
+            list_command(client_conn, client_addr, data)
+        elif data.lower().find("get") != -1:
+            get_command(client_conn, client_addr, data)
+        elif data.lower().find("createtracker") != -1:
+            createtracker(client_conn, client_addr, data)
+        elif data.lower().find("updatetracker") != -1:
+            updatetracker(client_conn, client_addr, data)
+        else:
+            print "Server received unrecognized command from {0}: {1}".format(client_addr[0], data)
+    client_conn.close()
+
+
+print "Starting server, hostname = {}".format(socket.gethostname())
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.bind(('', SERVER_PORT))
+print "Bound socket to port {}".format(SERVER_PORT)
+sock.listen(5)
+print "Listening for clients..."
+try:
+    while True:
+        (connection, addr) = sock.accept()
+        print "Connection address: {0}".format(addr)
+        thread.start_new_thread(handle_client, (connection, addr))
+except KeyboardInterrupt:
+    sock.close()
