@@ -19,10 +19,10 @@ class HostInfo():
 class TrackerFile():
     def __init__(self):
         self.host_TTL = 15
-        self.tracker_directory = ''
+        self.tracker_directory = '.'
         self.file_directory = ''
         self.filename = ''
-        self.file_size = 0
+        self.file_size = long(0)
         self.description = ''
         self.md5 = ''
         self.hosts = []
@@ -37,22 +37,26 @@ class TrackerFile():
 
         tracker_file = open(tracker_filename, 'r')
         file_contents = tracker_file.read()
+
         tracker_file.close()
 
-        match = re.match(r"Filename:\s([^\n]+)", file_contents)
-        if match:
-            self.filename = match.group(1)
-        match = re.match(r"Filesize:\s([^\n]+)", file_contents)
-        if match:
-            self.file_size = long(match.group(1))
-        match = re.match(r"Description:\s([^\n]*)", file_contents)
-        if match:
-            self.description = match.group(1)
-        match = re.match(r"MD5:\s([^\n]+)", file_contents)
-        if match:
-            self.md5 = match.group(1)
-
         for line in file_contents.split('\n'):
+            match = re.match(r"Filename:\s(.+)", line)
+            if match:
+                self.filename = match.group(1)
+
+            match2 = re.match(r"Filesize:\s(.+)", line)
+            if match2:
+                self.file_size = long(match2.group(1))
+
+            match3 = re.match(r"Description:\s(.*)", line)
+            if match3:
+                self.description = match3.group(1)
+
+            match4 = re.match(r"MD5:\s(.+)", line)
+            if match4:
+                self.md5 = match4.group(1)
+
             host = re.match(r"^([^:\s]+):([^:\s]+):([^:\s]+):([^:\s]+):([^:\s]+)", line)
             if host:
                 new_host = HostInfo()
@@ -87,7 +91,6 @@ class TrackerFile():
             print "Tracker file does not exist"
             return FILE_ERR
 
-
         start_byte = tokens[2]
         end_byte = tokens[3]
         ip_address = tokens[4]
@@ -114,7 +117,46 @@ class TrackerFile():
         return FILE_SUCC
 
     def create(self, cmd):
-        pass
+        tokens = cmd.split(' ')
+        if len(tokens) != 7:
+            print "Improper create command given"
+            return FILE_ERR
+
+        tracker_filename = tokens[1]
+
+        if tracker_filename.find('.track') == -1:
+            tracker_filename += '.track'
+
+        # Check if file exists
+        if not os.path.isfile(tracker_filename):
+            print "Tracker file does not exist"
+            return FILE_ERR
+
+        # Parse command
+        self.file_size = tokens[2]
+        self.description = tokens[3]
+        self.md5 = tokens[4]
+        ip_address = tokens[5]
+        port = tokens[6]
+
+        start_byte = 0
+        end_byte = self.file_size
+        time_stamp = long(time.time())
+
+        self.description.replace('_', ' ')
+
+        new_host = HostInfo()
+        new_host.ip_addr = ip_address
+        new_host.port = port
+        new_host.start_byte = start_byte
+        new_host.end_byte = end_byte
+        new_host.time_stamp = time_stamp
+        self.hosts.append(new_host)
+
+        # Remove out-dated host info and rewrite file
+        self._rewrite_file()
+
+        return FILE_SUCC
 
     def updateCommand(self, filename, port):
         pass
@@ -143,17 +185,30 @@ class TrackerFile():
     def get_num_hosts(self):
         return len(self.hosts)
 
-    def _find(self, key, file_contents, value):
-        pass
-
-    def _parse_host(self, line):
-        pass
-
     def _rewrite_file(self):
-        pass
+        if self.filename != '':
+            # Remove outdated hosts
+            self._remove_hosts()
+            if os.path.isfile(self.filename + '.track'):
+                os.remove(self.filename + '.track')
+            tracker_file = open(self.filename + '.track', 'w')
+            tracker_file.write('Filename: ' + self.filename + '\n')
+            tracker_file.write('Filesize: ' + str(self.file_size) + '\n')
+            tracker_file.write('Description: ' + self.description + '\n')
+            tracker_file.write('MD5: ' + self.md5 + '\n')
+
+            for host in self.hosts:
+                tracker_file.write(host.ip_address + ":")
+                tracker_file.write(str(host.port) + ":")
+                tracker_file.write(str(host.start_byte) + ":")
+                tracker_file.write(str(host.end_byte) + ":")
+                tracker_file.write(str(host.time_stamp) + "\n")
+
+            tracker_file.close()
 
     def _remove_hosts(self):
-        pass
-
-
-
+        current_time = long(time.time())
+        for host in self.hosts[:]:
+            # Remove hosts if timestamp is older than hostTTL minutes
+            if self.host_TTL * 60 <= current_time - host.time_stamp:
+                self.hosts.remove(host)
