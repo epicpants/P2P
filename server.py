@@ -1,8 +1,7 @@
 import socket
-import thread
+from threading import Thread
+#from communication import Comm
 
-#SERVER_IP = socket.gethostbyname(socket.getfqdn())
-#SERVER_IP = socket.gethostname()
 SERVER_PORT = 7777
 CHUNK_SIZE = 1024
 
@@ -49,6 +48,8 @@ try:
     while True:
         (connection, addr) = sock.accept()
         print "Connection address: {0}".format(addr)
-        thread.start_new_thread(handle_client, (connection, addr))
+        thread = Thread(target=handle_client, args=(connection, addr))
+        thread.start()
 except KeyboardInterrupt:
+    print
     sock.close()
