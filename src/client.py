@@ -10,6 +10,15 @@ if len(sys.argv) != 2:
     exit(1)
 server_address = sys.argv[1]
 
+def commandLineInterface()
+    print "P2P CLI Started"
+    userCommandInput = None
+    userCommand = None
+    trackerFileName = None
+
+    while 1
+        
+
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 print "Connecting to server..."
 sock.connect((server_address, SERVER_PORT))
@@ -31,3 +40,6 @@ except KeyboardInterrupt:
     print
 sock.close()
 print count
+
+while 1
+    #infinite while loop to let the threads do the work
