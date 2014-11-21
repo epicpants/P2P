@@ -1,6 +1,5 @@
 import socket
 import sys
-
 SERVER_PORT = 7777
 PEER_PORT = 8888
 CHUNK_SIZE = 1024
