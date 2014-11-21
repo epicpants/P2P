@@ -17,7 +17,7 @@ def commandLineInterface()
     trackerFileName = None
 
     while 1
-        
+
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 print "Connecting to server..."
