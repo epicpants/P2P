@@ -31,3 +31,6 @@ except KeyboardInterrupt:
     print
 sock.close()
 print count
+
+while 1
+    #infinite while loop to let the threads do the work
