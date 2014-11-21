@@ -1,5 +1,6 @@
 import socket
 import sys
+import StringIO
 SERVER_PORT = 7777
 PEER_PORT = 8888
 CHUNK_SIZE = 1024
@@ -10,13 +11,16 @@ if len(sys.argv) != 2:
     exit(1)
 server_address = sys.argv[1]
 
-def commandLineInterface()
+def command_line_interface():
     print "P2P CLI Started"
-    userCommandInput = None
-    userCommand = None
-    trackerFileName = None
+    user_command_input = None
+    user_command = None
+    tracker_file_name = None
 
-    while 1
+    while 1:
+        user_command_input = raw_input()
+        user_command_StringIO = StringIO.StringIO(user_command_input)
+        
 
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -41,5 +45,5 @@ except KeyboardInterrupt:
 sock.close()
 print count
 
-while 1
+while 1:
     #infinite while loop to let the threads do the work
