@@ -1,6 +1,8 @@
 import os
 import re
 import time
+import md5
+import socket
 
 FILE_SUCC = 0
 FILE_FAIL = 1
@@ -158,11 +160,40 @@ class TrackerFile():
 
         return FILE_SUCC
 
-    def updateCommand(self, filename, port):
-        pass
+    def updateCommand(self, filename, port, start_byte, end_byte):
+        #Generate command to send to server
+        cmd = "updatetracker " + filename + " "   #File name
+        cmd += start_byte + " " + end_byte + " "  #File chunk
+
+        #Get local IP address
+        cmd += str(socket.gethostbyname(socket.gethostname())) + " "
+
+        cmd += port + "\n" #Port number
+        return cmd
 
     def createCommand(self, filename, port, description="_"):
-        pass
+        #Generate command to send to server
+        cmd = "updatetracker " + filename + " "      #File name
+        cmd += str(os.stat(filename).st_size) + " "  #Filesize
+        cmd += description.replace(" ","_") + " "    #Description
+
+        #Calculate MD5 Checksum for file
+        f = open(filename,'rb')
+        block_size=2**20):
+        md5 = hashlib.md5()
+        while True:
+            data = f.read(block_size)
+            if not data:
+                break
+            md5.update(data)
+        cmd += str(md5.digest()) + " "
+
+        #Get local IP address
+        cmd += str(socket.gethostbyname(socket.gethostname())) + " "
+
+        cmd += port + "\n" #Port number
+
+        return cmd
 
     def get_filename(self):
         return self.filename
