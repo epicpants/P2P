@@ -14,7 +14,10 @@ def commandLineInterface()
     print "P2P CLI Started"
     userCommandInput = None
     userCommand = None
-    
+    trackerFileName = None
+
+    while 1
+        
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 print "Connecting to server..."
