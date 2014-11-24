@@ -1,15 +1,17 @@
+import hashlib
 import socket
 import os
+import re
 from threading import Thread
 import tracker_parser
-#from communication import Comm
 
 SERVER_PORT = 7777
 CHUNK_SIZE = 1024
+SERVER_DIR = '.'
 
 
 def get_tracker_files():
-    dir = os.listdir('.')
+    dir = os.listdir(SERVER_DIR)
     tracker_files = [tracker for tracker in dir if os.path.isfile(tracker) and tracker.find('.track') != -1]
     return tracker_files
 
@@ -39,29 +41,80 @@ def list_command(conn, addr, command):
 
 def get_command(conn, addr, command):
     print "Received get command from {}".format(addr[0])
+    tracker_filename = ''
+    match = re.match(r"get\s(.+)", command.lower())
+    if match:
+        tracker_filename = match.group(1)
+        if os.path.isfile(tracker_filename):
+            conn.send('REP GET BEGIN')
+        else:
+            conn.send('ERROR FILE DNE')
+    else:
+        conn.send('ERROR NO FILENAME')
+
+    tracker_file = open(tracker_filename, 'rb')
+    block_size=2**20
+    md5 = hashlib.md5()
+    while True:
+        data = tracker_file.read(CHUNK_SIZE)
+        if not data:
+            break
+        conn.send(data)
+        md5.update(data)
+    tracker_file.close()
+    conn.send('REP GET END {0}'.format(md5.hexdigest()))
 
 
 def createtracker(conn, addr, command):
     print "Received createtracker command from {}".format(addr[0])
+    tracker_file = tracker_parser.TrackerFile()
+    status = tracker_parser.FILE_FAIL
+    try:
+        status = tracker_file.create(command)
+    except:
+        pass
+
+    if status == tracker_parser.FILE_SUCC:
+        conn.send('createtracker succ')
+    elif status == tracker_parser.FILE_ERR:
+        conn.send('createtracker ferr')
+    else:
+        conn.send('createtracker fail')
 
 
 def updatetracker(conn, addr, command):
     print "Received updatetracker command from {}".format(addr[0])
+    tracker_file = tracker_parser.TrackerFile()
+    status = tracker_parser.FILE_FAIL
+    try:
+        status = tracker_file.update(command)
+    except:
+        pass
+
+    if status == tracker_parser.FILE_SUCC:
+        conn.send('updatetracker succ')
+    elif status == tracker_parser.FILE_ERR:
+        conn.send('updatetracker ferr')
+    else:
+        conn.send('updatetracker fail')
 
 
 def handle_client(client_conn, client_addr):
-    data = client_conn.recv(CHUNK_SIZE)
-    if data:
-        if data.lower() == "req list" or data.lower() == "<req list>":
-            list_command(client_conn, client_addr, data)
-        elif data.lower().find("get") != -1:
-            get_command(client_conn, client_addr, data)
-        elif data.lower().find("createtracker") != -1:
-            createtracker(client_conn, client_addr, data)
-        elif data.lower().find("updatetracker") != -1:
-            updatetracker(client_conn, client_addr, data)
-        else:
-            print "Server received unrecognized command from {0}: {1}".format(client_addr[0], data)
+    try:
+        data = client_conn.recv(CHUNK_SIZE)
+        if data:
+            if data.lower() == "req list" or data.lower() == "<req list>":
+                list_command(client_conn, client_addr, data)
+            elif data.lower().find("get") != -1:
+                get_command(client_conn, client_addr, data)
+            elif data.lower().find("createtracker") != -1:
+                createtracker(client_conn, client_addr, data)
+            elif data.lower().find("updatetracker") != -1:
+                updatetracker(client_conn, client_addr, data)
+            else:
+                print "Server received unrecognized command from {0}: {1}".format(client_addr[0], data)
+    except:
+        pass
 
 
 print "Starting server, hostname = {}".format(socket.gethostname())
