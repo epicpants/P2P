@@ -173,7 +173,7 @@ class TrackerFile():
 
     def createCommand(self, filename, port, description="_"):
         #Generate command to send to server
-        cmd = "updatetracker " + filename + " "      #File name
+        cmd = "createtracker " + filename + " "      #File name
         cmd += str(os.stat(filename).st_size) + " "  #Filesize
         cmd += description.replace(" ","_") + " "    #Description
 
