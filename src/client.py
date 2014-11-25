@@ -8,6 +8,10 @@ import StringIO
 import threading
 import time
 import tracker_parser
+import socket
+import threading
+
+threadLock = threading.lock()
 
 SND = 0
 RCV = 1
@@ -221,6 +225,34 @@ def timer_routine(get_update=False):
         time_slot += 1
         if time_slot > 4:
             time_slot = 4
+
+# threadable method for acquiring file segment
+def getSegment( socket, segNum, finalSeg ):
+    bufferSize = 1024
+    
+    #read in data from socket
+    buffer = socket.recv( bufferSize )
+    
+    #determine if byte count is valid
+    if buffer == '':
+        raise IOError("socket connection broken!")
+        return
+        
+    if( ( len(buffer) < bufferSize ) and ( segNum != finalSeg ) ):
+        raise IOError("Invalid segment size received, exiting thread!"
+        return
+	
+    #call writeOut
+    threadLock.acquire()
+	
+    #call write to file function
+    # writeOut( segNum, finalSeg, buffer )
+	
+    threadLock.release()
+	
+    socket.close()
+	
+    return
 
 
 """
