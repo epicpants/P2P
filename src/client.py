@@ -1,10 +1,11 @@
 import hashlib
+import mmap
 import os
 import re
 import socket
 import sys
 import StringIO
-from threading import Thread
+import threading
 import time
 import tracker_parser
 
@@ -17,8 +18,34 @@ CHUNK_SIZE = 1024
 UPDATE_SLEEP_TIME = 10  # in seconds
 LIST_SLEEP_TIME = 5  # in seconds
 TARGET_FILE = 'picture_wallpaper.jpg'
+TARGET_FILE_SIZE = 35738
 CLIENT_IP = socket.gethostname()
 CLIENT_DIR = '.'
+CLIENT_PERC_DICT = {1: [0, 5, 10, 15, 20],
+                    2: [21, 25, 30, 35, 40],
+                    3: [41, 45, 50, 55, 60],
+                    4: [61, 65, 70, 75, 80],
+                    5: [81, 85, 90, 95, 100]}
+PERC_BYTES_DICT = {}
+for percent in range(101):  # [0, 100]
+    mod = percent % 5
+    if mod == 0:  # divisible by 5
+        PERC_BYTES_DICT[percent] = long(float(percent)/100 * TARGET_FILE_SIZE)
+    elif mod == 1:
+        PERC_BYTES_DICT[percent] = PERC_BYTES_DICT[percent - 1] + 1
+
+
+def advertise_info(time_slot):
+    if time_slot == 0:
+        percent_low = CLIENT_PERC_DICT[client_num][0]
+    elif client_num != 1:
+        percent_low = CLIENT_PERC_DICT[client_num][time_slot - 1] + 1
+    else:
+        percent_low = 0
+    percent_high = CLIENT_PERC_DICT[client_num][time_slot]
+    start_byte = PERC_BYTES_DICT[percent_low]
+    end_byte = PERC_BYTES_DICT[percent_high]
+    return percent_low, percent_high, start_byte, end_byte
 
 
 def command_line_interface():
@@ -94,9 +121,21 @@ def get_tracker_file():  # 'get' command for server, return true if got tracker 
     return error
 
 
+def thread_handler(peer_ip, start_byte, num_bytes):
+    pass
+
+
 def get_file():  # 'get' command for peers, return true if file download successful
     while get_tracker_file():
-        pass
+        pass  # loop until successfully have tracker file
+
+    target_file = open(TARGET_FILE, 'wb+')
+    writer = mmap.mmap(target_file.fileno(), TARGET_FILE_SIZE)  # create blank file of specified size
+    tracker_file = tracker_parser.TrackerFile()
+    while True:
+        if tracker_file.parseTrackerFile('{0}.track'.format(TARGET_FILE)):  # true if error
+            return False
+
     return True
 
 
@@ -162,13 +201,13 @@ def listen_for_peers():
 
 
 def timer_routine(get_update=False):
+    time_slot = 1
     while True:
         if client_type == SND:
-            # TODO: Make start_byte and end_byte dynamic based on client_num and time
-            start_byte = 0
-            end_byte = 0
+            (percent_low, percent_high, start_byte, end_byte) = advertise_info(time_slot)
             if not update_command(start_byte, end_byte):  # an error occurred
                 update_command(start_byte, end_byte)  # try one more time
+            print "I am client_{0}, and I am advertising the following chunk of the file: {1}% to {2}%".format(client_num, percent_low, percent_high)
             time.sleep(UPDATE_SLEEP_TIME)
         elif not get_update:
             has_target_file = req_list()
@@ -179,6 +218,9 @@ def timer_routine(get_update=False):
             if not get_tracker_file():  # an error occurred
                 get_tracker_file()  # try one more time
             time.sleep(UPDATE_SLEEP_TIME)
+        time_slot += 1
+        if time_slot > 4:
+            time_slot = 4
 
 
 """
@@ -195,14 +237,14 @@ try:
     if client_type == SND:
         while create_command():
             pass
-        update_thread = Thread(target=timer_routine)  # Thread to update server periodically
+        update_thread = threading.Thread(target=timer_routine)  # Thread to update server periodically
         update_thread.start()
         listen_for_peers()
     else:  # client_type == RCV
-        list_thread = Thread(target=timer_routine)  # Thread to request list from server periodically
+        list_thread = threading.Thread(target=timer_routine)  # Thread to request list from server periodically
         list_thread.start()
         list_thread.join()
-        get_update_thread = Thread(target=timer_routine, args=(True,))
+        get_update_thread = threading.Thread(target=timer_routine, args=(True,))
         get_update_thread.start()
         download_succ = get_file()
         if download_succ:
