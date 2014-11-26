@@ -2,7 +2,7 @@
 	Desc: Handle Basic File I/O for saving/loading
 		configuration dictionaries
 '''
-import json, ast
+import json, ast, os
 
 class fileIO:
 	
@@ -18,7 +18,10 @@ class fileIO:
 	''' Desc: Saves dictionary to file
 		Params: dictionary containing config data, filename string			
 	'''
-	def saveConfig( confData, fileName = defFile ):
+	def saveConfig( self, confData, fileName = defFile ):
+		dir = os.path.dirname(fileName)
+		if not os.path.exists(dir):
+			os.makedirs(dir)
 		file = open( fileName, "w" )
 		file.write(json.dumps(confData))
 		file.close()
@@ -27,7 +30,7 @@ class fileIO:
 	''' Desc: Loads configuration data from file, returns a dictionary
 		Params: filename string
 	'''
-	def loadConfig( fileName ):
+	def loadConfig( self, fileName ):
 		file = open( fileName, "r" )
 		
 		# contains unwanted 'u' chars
