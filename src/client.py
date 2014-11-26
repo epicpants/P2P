@@ -18,7 +18,6 @@ config["CLIENT_IP"] = socket.gethostname()
 
 SND = 0
 RCV = 1
-# TODO: Read from config
 SERVER_PORT = 7777
 PEER_PORT = 8888
 CHUNK_SIZE = 1024
