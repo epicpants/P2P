@@ -8,7 +8,13 @@ import StringIO
 import time
 import tracker_parser
 import threading
+from fileIO import fileIO
 
+# Read from config file
+confFile = "./client.conf"
+fileHandler = fileIO()
+config = fileHandler.loadConfig( confFile )
+config["CLIENT_IP"] = socket.gethostname()
 
 SND = 0
 RCV = 1
