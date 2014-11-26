@@ -89,8 +89,27 @@ def command_line_interface():
 
     while 1:
         user_command_input = raw_input()
-        print user_command_input.type
-        user_command_StringIO = StringIO.StringIO(user_command_input)
+        #print user_command_input.type
+        #user_command_StringIO = StringIO.StringIO(user_command_input)
+        user_command = user_command_input.split()
+
+        if(user_command[0] == "createtracker" or user_command[0] == "CREATETRACKER"):
+            print "createtracker"
+            #tracker_file_name = user_command[1]
+            create_command()#tracker_file_name)
+        elif(user_command[0] == "list" or user_command[0] == "LIST"):
+            print "Getting list of trackers from server"
+            req_list()
+        elif(user_command[0] == "get" or user_command[0] == "GET"):
+            print "GET"
+            #tracker_file_name = user_command[1]
+            get_tracker_file()#tracker_file_name)
+        elif(user_command[0] == "updatetracker" or user_command[0] == "UPDATETRACKER"):
+            print "updatetracker"
+            #tracker_file_name = user_command[1]
+            update_command()#tracker_file_name)
+        else:
+            print "Command not recognized"
 
 
 def req_list():  # return whether list contains TARGET_FILE
