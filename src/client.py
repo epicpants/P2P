@@ -5,13 +5,10 @@ import re
 import socket
 import sys
 import StringIO
-import threading
 import time
 import tracker_parser
-import socket
 import threading
 
-threadLock = threading.lock()
 
 SND = 0
 RCV = 1
@@ -19,18 +16,21 @@ RCV = 1
 SERVER_PORT = 7777
 PEER_PORT = 8888
 CHUNK_SIZE = 1024
+THREAD_TIMEOUT = 10
 UPDATE_SLEEP_TIME = 10  # in seconds
 LIST_SLEEP_TIME = 5  # in seconds
 TARGET_FILE = 'picture_wallpaper.jpg'
 TARGET_FILE_SIZE = 35738
 CLIENT_IP = socket.gethostname()
 CLIENT_DIR = '.'
+THREAD_LOCK = threading.Lock()
 CLIENT_PERC_DICT = {1: [0, 5, 10, 15, 20],
                     2: [21, 25, 30, 35, 40],
                     3: [41, 45, 50, 55, 60],
                     4: [61, 65, 70, 75, 80],
                     5: [81, 85, 90, 95, 100]}
 PERC_BYTES_DICT = {}
+unwritten_bytes = [(0, TARGET_FILE_SIZE)]  # list of (start_byte, end_byte) tuples indicating ranges of bytes not yet written
 for percent in range(101):  # [0, 100]
     mod = percent % 5
     if mod == 0:  # divisible by 5
@@ -50,6 +50,35 @@ def advertise_info(time_slot):
     start_byte = PERC_BYTES_DICT[percent_low]
     end_byte = PERC_BYTES_DICT[percent_high]
     return percent_low, percent_high, start_byte, end_byte
+
+
+def get_bytes_to_req(host):
+    THREAD_LOCK.acquire()
+    byte_range = [(start, end) for (start, end) in unwritten_bytes if host.start_byte < end and host.start_byte >= start]
+    if len(byte_range) == 0:  # no bytes the host is offering need to be written
+        THREAD_LOCK.release()
+        return 0, 0
+    start_byte = byte_range[0][0]  # take the start_byte of the first found tuple
+    num_bytes = CHUNK_SIZE
+    if start_byte + num_bytes > byte_range[0][1]:
+        num_bytes = byte_range[0][1] - start_byte  # + 1?
+    THREAD_LOCK.release()
+    return start_byte, num_bytes
+
+
+def update_unwritten_bytes(start_byte, num_bytes):  # should only be called from within critical section
+    byte_range = [(start, end) for (start, end) in unwritten_bytes if start_byte < end and start_byte >= start]
+    if len(byte_range) == 0:
+        return
+    (old_start, old_end) = byte_range[0]
+    # split the range of bytes into new ranges that effectively removes the range of data we just wrote
+    (start1, end1) = (old_start, start_byte - 1)
+    (start2, end2) = (start_byte + num_bytes + 1, old_end)
+    if end1 > start1:
+        unwritten_bytes.append((start1, end1))
+    if end2 > start2:
+        unwritten_bytes.append((start2, end2))
+    unwritten_bytes.remove(byte_range[0])
 
 
 def command_line_interface():
@@ -125,8 +154,40 @@ def get_tracker_file():  # 'get' command for server, return true if got tracker 
     return error
 
 
-def thread_handler(peer_ip, start_byte, num_bytes):
-    pass
+def thread_handler(peer_address, start_byte, num_bytes, writer):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect((peer_address, PEER_PORT))
+    sock.send('GET {0} {1} {2}'.format(TARGET_FILE, start_byte, num_bytes))
+    # Confirm 'get' request
+    data = sock.recv(CHUNK_SIZE)
+    if not data:
+        sock.close()
+        return
+    elif data != 'REP GET BEGIN':
+        sock.close()
+        return
+
+    # Receive data
+    data = sock.recv(num_bytes)
+    if not data or len(data) != num_bytes:
+        sock.close()
+        return
+
+    # Enter critical section
+    THREAD_LOCK.acquire()
+    # Write to file
+    writer.seek(start_byte)
+    writer.write(data)
+    writer.flush()
+    update_unwritten_bytes(start_byte, num_bytes)
+    THREAD_LOCK.release()
+
+    # Confirm 'get' complete
+    data = sock.recv(CHUNK_SIZE)
+    if not data:
+        sock.close()
+        return
+    sock.close()
 
 
 def get_file():  # 'get' command for peers, return true if file download successful
@@ -139,6 +200,23 @@ def get_file():  # 'get' command for peers, return true if file download success
     while True:
         if tracker_file.parseTrackerFile('{0}.track'.format(TARGET_FILE)):  # true if error
             return False
+
+        threads = []
+        for host in tracker_file.hosts:  # spawn a new thread for each host
+            (start_byte, num_bytes) = get_bytes_to_req(host)
+            if num_bytes > 0:
+                thread = threading.Thread(target=thread_handler, args=(host.ip_addr, start_byte, num_bytes, writer))
+                thread.start()
+                threads.append(thread)
+
+        # wait until all threads complete or timeout occurs
+        timeout = 0
+        while len([thread for thread in threads if thread.is_alive()]) != 0 and timeout < THREAD_TIMEOUT:
+            timeout += 1
+            time.sleep(1)
+
+        if len(unwritten_bytes) == 0:  # no bytes left to be written - we're done!
+            break
 
     return True
 
@@ -182,24 +260,30 @@ def listen_for_peers():
     while True:
         (connection, addr) = sock.accept()
         filename = ''
-        chunk_num = None
+        start_byte = None
         req = connection.recv(CHUNK_SIZE)
         if not req:
             continue
-        match = re.match(r"get\s([^\s]+)\s(\d+)", req.lower())
+        match = re.match(r"get\s([^\s]+)\s(\d+)\s(\d+)", req.lower())
         if match:
             filename = match.group(1)
-            chunk_num = long(match.group(2))
+            start_byte = long(match.group(2))
+            num_bytes = long(match.group(3))
             if os.path.isfile(filename):
                 connection.send('REP GET BEGIN')
             else:
                 connection.send('ERROR FILE DNE')
+                continue
+            if num_bytes > CHUNK_SIZE:
+                connection.send('GET invalid')
+                continue
         else:
             connection.send('ERROR NO FILENAME')
+            continue
 
         req_file = open(filename, 'rb')
-        req_file.seek(chunk_num * CHUNK_SIZE)
-        data = req_file.read(CHUNK_SIZE)
+        req_file.seek(start_byte)
+        data = req_file.read(num_bytes)
         connection.send(data)
         connection.send('REP GET END')
 
@@ -226,6 +310,7 @@ def timer_routine(get_update=False):
         if time_slot > 4:
             time_slot = 4
 
+"""
 # threadable method for acquiring file segment
 def getSegment( socket, segNum, finalSeg ):
     bufferSize = 1024
@@ -253,7 +338,7 @@ def getSegment( socket, segNum, finalSeg ):
     socket.close()
 	
     return
-
+"""
 
 """
 Entry point
@@ -283,26 +368,3 @@ try:
             print "I am client_{0} and I received the file correctly!".format(client_num)
 except KeyboardInterrupt:
     print
-
-
-
-"""
-data = raw_input("Enter client command:\n")
-assert isinstance(data, str)
-sent = sock.send(data)
-if sent == 0:
-    print "Did not send"
-
-count = 0
-try:
-    while True:
-        received = sock.recv(CHUNK_SIZE)
-        if not received:
-            break
-        print received
-        count += 1
-except KeyboardInterrupt:
-    print
-sock.close()
-print count
-"""
