@@ -56,8 +56,7 @@ for percent in range(101):  # [0, 100]
         PERC_BYTES_DICT[percent] = PERC_BYTES_DICT[percent - 1] + 1
 
 
-## Uses time_slot parameter to determine segment specifics
-#   by means of a stored lookup dictionary: CLIENT_PERC_DICT
+## Uses time_slot parameter to determine segment specifics by means of a stored lookup dictionary: CLIENT_PERC_DICT
 #   Returns percent and bytes ranges: percent_low, percent_high, start_byte, end_byte
 # @param time_slot Integer defining which timeslot a client is using (1-5).
 def advertise_info(time_slot):
@@ -73,9 +72,8 @@ def advertise_info(time_slot):
     return percent_low, percent_high, start_byte, end_byte
 
 
-## Parses host line from tracker file to determine the starting
-#   byte range for the given host, as well as configured number of bytes.
-#   Returns; start_byte, num_bytes
+## Parses host line from tracker file to determine the starting byte range for the given host, as well as configured
+# number of bytes. Returns: start_byte, num_bytes
 # @param host Single Host line from Tracker File
 def get_bytes_to_req(host):
     THREAD_LOCK.acquire()
@@ -91,10 +89,10 @@ def get_bytes_to_req(host):
     return start_byte, num_bytes
 
 
-##
-#   Note: Should only be called from within critical section
-# @param start_byte
-# @param num_bytes
+## Updates tuple list for tracking which downloaded file segments have been written to file.
+#  Note: Should only be called from within critical section
+# @param start_byte Specifies beginning byte.
+# @param num_bytes Specifies segment length.
 def update_unwritten_bytes(start_byte, num_bytes):
     byte_range = [(start, end) for (start, end) in unwritten_bytes if start_byte < end and start_byte >= start]
     if len(byte_range) == 0:
@@ -147,8 +145,7 @@ def command_line_interface():
             print "Command not recognized"
 
 
-## Requests listing of available tracker files on server.
-#   Returns true if server responds with info, false otherwise.
+## Requests listing of available tracker files on server. Returns true if server responds with info, false otherwise.
 def req_list():
     has_target_file = False
     num_files = 0
@@ -174,10 +171,9 @@ def req_list():
     return has_target_file
 
 
-## Implementation of 'GET' command for server. Currently uses the
-#   tracker file specified in the clients configuration file.
-#   Returns true if there is an error downloading the file,
-#   specifically if there is an MD5 mismatch with the stored value.
+## Implementation of 'GET' command for server. Currently uses the tracker file specified in the clients configuration
+# file. Returns true if there is an error downloading the file, specifically if there is an MD5 mismatch with the
+# stored value.
 def get_tracker_file():
     error = True
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -214,8 +210,7 @@ def get_tracker_file():
     return error
 
 
-## Threadable GET implementation for acquiring data from peers.
-#   Called by get_file(). Writes data to writer parameter.
+## Threadable GET implementation for acquiring data from peers. Called by get_file(). Writes data to writer parameter.
 # @param peer_address Specifies the peer to request data from.
 # @param start_byte Specifies the beginning byte to request.
 # @param num_bytes Specifies the number of bytes to request.
@@ -241,11 +236,15 @@ def thread_handler(peer_address, start_byte, num_bytes, writer):
 
     # Enter critical section
     THREAD_LOCK.acquire()
+
     # Write to file
     writer.seek(start_byte)
     writer.write(data)
     writer.flush()
+
+    # Update byte roster
     update_unwritten_bytes(start_byte, num_bytes)
+
     THREAD_LOCK.release()
 
     # Confirm 'get' complete
@@ -256,9 +255,8 @@ def thread_handler(peer_address, start_byte, num_bytes, writer):
     sock.close()
 
 
-## Initializes 'GET' command for peers, using thread_handler() to acquire data.
-#   Uses target file specified by clients config file to determine request.
-#   Returns true if file download successful.
+## Initializes 'GET' command for peers, using thread_handler() to acquire data. Uses target file specified by clients
+# config file to determine request.
 def get_file():
     while get_tracker_file():
         pass  # loop until successfully have tracker file
@@ -294,12 +292,21 @@ def get_file():
     return True
 
 
-def update_command(start_byte, end_byte):  # return whether command was successful
+## Updates server with information stored in local tracker file. Used after client acquires additional data to be
+# advertised. Returns whether command was successfully received by server.
+# @param start_byte Starting byte to be advertised by client.
+# @param end_byte  End byte to be advertised by client.
+def update_command(start_byte, end_byte):
     error = False
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect((server_address, config["SERVER_PORT"]))
+
+    # instantiate TrackerFile object
     tracker_file = tracker_parser.TrackerFile()
+
+    # Generate update command string
     command = tracker_file.updateCommand(config["TARGET_FILE"], config["PEER_PORT"], start_byte, end_byte)
+
     sock.send(command)
     response = sock.recv(config["CHUNK_SIZE"])
     if not response:
@@ -310,12 +317,19 @@ def update_command(start_byte, end_byte):  # return whether command was successf
     return error
 
 
-def create_command():  # return whether command was successful
+## Requests server create a tracker file for the local target file specified in the configuration file.
+#   Used to begin advertising data to be shared. Returns whether command was successfully received by server.
+def create_command():
     error = False
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect((server_address, config["SERVER_PORT"]))
+
+    # instantiate TrackerFile object
     tracker_file = tracker_parser.TrackerFile()
+
+    # Generate creation command string
     command = tracker_file.createCommand(config["TARGET_FILE"], config["PEER_PORT"], '_')
+
     sock.send(command)
     response = sock.recv(config["CHUNK_SIZE"])
     if not response:
@@ -326,22 +340,36 @@ def create_command():  # return whether command was successful
     return error
 
 
+## Client listener for incoming peer connections. Accepts requests for advertised data, sends back requested segment.
 def listen_for_peers():
+
+    listenerQueueLen = 5
+
+    # Create socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.bind(('', config["PEER_PORT"]))
-    sock.listen(5)
+
+    # Listen for incoming connections, using backlog of specified length
+    sock.listen(listenerQueueLen)
+
     while True:
+
+        # Accept incoming connection
         (connection, addr) = sock.accept()
         filename = ''
         start_byte = None
         req = connection.recv(config["CHUNK_SIZE"])
         if not req:
             continue
+
+        # Parse command string
         match = re.match(r"get\s([^\s]+)\s(\d+)\s(\d+)", req.lower())
         if match:
             filename = match.group(1)
             start_byte = long(match.group(2))
             num_bytes = long(match.group(3))
+
+            # Determine if file is valid
             if os.path.isfile(filename):
                 connection.send('REP GET BEGIN')
             else:
@@ -354,13 +382,18 @@ def listen_for_peers():
             connection.send('ERROR NO FILENAME')
             continue
 
+        # Send requested segment
         req_file = open(filename, 'rb')
         req_file.seek(start_byte)
         data = req_file.read(num_bytes)
         connection.send(data)
+
+        # Send trailing closure
         connection.send('REP GET END')
 
 
+## Threadable routine for periodically updating server.
+# @param get_update
 def timer_routine(get_update=False):
     time_slot = 1
     while True:
@@ -383,35 +416,6 @@ def timer_routine(get_update=False):
         if time_slot > 4:
             time_slot = 4
 
-"""
-# threadable method for acquiring file segment
-def getSegment( socket, segNum, finalSeg ):
-    bufferSize = 1024
-    
-    #read in data from socket
-    buffer = socket.recv( bufferSize )
-    
-    #determine if byte count is valid
-    if buffer == '':
-        raise IOError("socket connection broken!")
-        return
-        
-    if( ( len(buffer) < bufferSize ) and ( segNum != finalSeg ) ):
-        raise IOError("Invalid segment size received, exiting thread!"
-        return
-	
-    #call writeOut
-    threadLock.acquire()
-	
-    #call write to file function
-    # writeOut( segNum, finalSeg, buffer )
-	
-    threadLock.release()
-	
-    socket.close()
-	
-    return
-"""
 
 """
 Entry point
@@ -425,19 +429,33 @@ client_num = sys.argv[3]
 
 try:
     if client_type == config["SND"]:
+
+        # Create tracker file
         while create_command():
             pass
-        update_thread = threading.Thread(target=timer_routine)  # Thread to update server periodically
+
+        # Thread to update server periodically
+        update_thread = threading.Thread(target=timer_routine)
         update_thread.start()
+
+        # Begin listener routine
         listen_for_peers()
+
     else:  # client_type == config["RCV"]
-        list_thread = threading.Thread(target=timer_routine)  # Thread to request list from server periodically
+
+        # Thread to request list from server periodically
+        list_thread = threading.Thread(target=timer_routine)
         list_thread.start()
         list_thread.join()
+
+        # Thread to update server periodically
         get_update_thread = threading.Thread(target=timer_routine, args=(True,))
         get_update_thread.start()
+
+        # Begin downloading routine
         download_succ = get_file()
         if download_succ:
             print "I am client_{0} and I received the file correctly!".format(client_num)
+
 except KeyboardInterrupt:
     print
