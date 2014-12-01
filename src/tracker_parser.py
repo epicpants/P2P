@@ -1,15 +1,36 @@
+## @package tracker_parser Implementation of the TrackerFile and HostInfo classes
+
 import os
 import re
 import time
 import hashlib
 import socket
 
+## Indicates successful status
 FILE_SUCC = 0
+
+## Indicates failed status
 FILE_FAIL = 1
+
+## Indicates an error status
 FILE_ERR = 2
 
-
+## HostInfo contains information about the client hosting a tracked file.
 class HostInfo():
+    ## @var ip_addr
+    # IP address of hosting client
+    ## @var port
+    # Port hosting client is listening on
+    ## @var start_byte
+    # The start byte offset for the file segment available
+    ## @var end_byte
+    # The end byte offset for the file segment available
+    ## @var time_stamp
+    # The last time that the hosts information was updated
+
+    ## Constructor for HostInfo.
+    #  Assigns all variables empty values
+    # @param self Reference to this object
     def __init__(self):
         self.ip_addr = ''
         self.port = None
@@ -17,8 +38,33 @@ class HostInfo():
         self.end_byte = None
         self.time_stamp = None
 
-
+## TrackerFile contains information about the files currently being tracked and
+# the clients hosting segments of the tracked files. The TrackerFile class also
+# contains functionality that creates and updates the tracker files, as well as
+# functionality for getting information from the tracker file.
 class TrackerFile():
+    ## @var host_TTL
+    # The time in minutes before information about a host is considered invalid.
+    # The host's information will be removed from the tracker file after a 
+    # specified number of minutes.
+    ## @var tracker_directory
+    # The directory containing the tracker files (defaults to this directory).
+    ## @var file_directory
+    # The directory containing the tracked files (defaults to this directory).
+    ## @var filename
+    # The name of the file being tracked.
+    ## @var file_size
+    # The size of the file being tracked (in bytes).
+    ## @var description
+    # A description about the file being tracked.
+    ## @var md5
+    # The MD5 hash of the file being tracked.
+    ## @var hosts
+    # A list of the clients hosting some portion of the file being tracked.
+
+    ## Constructor for TrackerFile.
+    # Assigns default values to member variables.
+    # @param self Reference to this object
     def __init__(self):
         self.host_TTL = 15
         self.tracker_directory = '.'
@@ -29,6 +75,10 @@ class TrackerFile():
         self.md5 = ''
         self.hosts = []
 
+    ## Parse the tracker file and store in the member variables.
+    # @param self Reference to this object
+    # @param tracker_filename Name of the tracker file
+    # @return The error status is returned (FILE_SUCC, FILE_FAIL, FILE_ERR)
     def parseTrackerFile(self, tracker_filename):
         error = False
 
@@ -43,22 +93,27 @@ class TrackerFile():
         tracker_file.close()
 
         for line in file_contents.split('\n'):
+            # Get the filename from the tracker file
             match = re.match(r"Filename:\s(.+)", line)
             if match:
                 self.filename = match.group(1)
 
+            # Get the file size from the tracker file
             match2 = re.match(r"Filesize:\s(.+)", line)
             if match2:
                 self.file_size = long(match2.group(1))
 
+            # Get the file description from the tracker file
             match3 = re.match(r"Description:\s(.*)", line)
             if match3:
                 self.description = match3.group(1)
 
+            # Get the MD5 hash from the tracker file
             match4 = re.match(r"MD5:\s(.+)", line)
             if match4:
                 self.md5 = match4.group(1)
 
+            # Get the information about the clients hosting the file
             host = re.match(r"^([^:\s]+):([^:\s]+):([^:\s]+):([^:\s]+):([^:\s]+)", line)
             if host:
                 new_host = HostInfo()
@@ -74,6 +129,11 @@ class TrackerFile():
         return error
 
 
+    ## Updates the tracker file with the command from the client.
+    # If no command is specified then invalid hosts are removed.
+    # @param self Reference to this object
+    # @param cmd The UPDATETRACKER command from the client
+    # @return The error status is returned (FILE_SUCC, FILE_FAIL, FILE_ERR)
     def update(self, cmd=''):
         # If no command, remove old hosts
         if cmd == '':
@@ -93,6 +153,7 @@ class TrackerFile():
             print "Tracker file does not exist"
             return FILE_ERR
 
+        # Collect information about the host from the command
         start_byte = tokens[2]
         end_byte = tokens[3]
         ip_address = tokens[4]
@@ -101,6 +162,7 @@ class TrackerFile():
 
         self.parseTrackerFile(tracker_filename)
 
+        # Update host if it exists or create new host if not found
         update_hosts = [host for host in self.hosts if host.ip_address == ip_address]
         if len(update_hosts) > 0:
             update_hosts[0].start_byte = start_byte
@@ -118,6 +180,10 @@ class TrackerFile():
         self._rewrite_file()
         return FILE_SUCC
 
+    ## Creates the tracker file with the command from the client.
+    # @param self Reference to this object
+    # @param cmd The CREATETRACKER command from the client
+    # @return The error status is returned (FILE_SUCC, FILE_FAIL, FILE_ERR)
     def create(self, cmd):
         tokens = cmd.split(' ')
         if len(tokens) != 7:
@@ -147,6 +213,7 @@ class TrackerFile():
 
         self.description.replace('_', ' ')
 
+        # Add new host to lists of hosts
         new_host = HostInfo()
         new_host.ip_addr = ip_address
         new_host.port = port
@@ -160,6 +227,13 @@ class TrackerFile():
 
         return FILE_SUCC
 
+    ## Generates the UPDATETRACKER command for the client
+    # @param self Reference to this object
+    # @param filename Name of file being tracked
+    # @param port Port host machine will listen on
+    # @param start_byte Start byte offset of file segment available on this host
+    # @param end_byte End byte offset of file segment available on this host
+    # @return UPDATETRACKER command to be used by this client
     def updateCommand(self, filename, port, start_byte, end_byte):
         #Generate command to send to server
         cmd = "updatetracker " + filename + " "   #File name
@@ -171,6 +245,12 @@ class TrackerFile():
         cmd += port + "\n" #Port number
         return cmd
 
+    ## Generates the CREATETRACKER command for the client
+    # @param self Reference to this object
+    # @param filename Name of the file to be tracked
+    # @param port Port host machine will listen on
+    # @param description Description of the file to be tracked
+    # @return CREATETRACKER command to be used by this client
     def createCommand(self, filename, port, description="_"):
         #Generate command to send to server
         cmd = "createtracker " + filename + " "      #File name
@@ -195,39 +275,63 @@ class TrackerFile():
 
         return cmd
 
+    ## Gets the filename of the tracked file.
+    # @param self Reference to this object
+    # @return Name of the file being tracked
     def get_filename(self):
         return self.filename
 
+    ## Gets the file size of the tracked file.
+    # @param self Reference to this object
+    # @return Size of the file being tracked
     def get_file_size(self):
         return self.file_size
 
+    ## Gets the description of the tracked file.
+    # @param self Reference to this object
+    # @return Description of the file being tracked
     def get_description(self):
         if self.description == '':
             self.description = '_'
         self.description.replace(' ', '_')
         return self.description
 
+    ## Gets the MD5 hash of the tracked file.
+    # @param self Reference to this object
+    # @return MD5 hash of the file being tracked
     def get_md5(self):
         return self.md5
 
+    ## Gets a HostInfo containing information about one of this file's hosts
+    # @param self Reference to this object
+    # @param item Index of host in tracker file's hosts list
+    # @return An instance of HostInfo about one of the file's hosts
     def __getitem__(self, item):
         return self.hosts[item]
 
+    ## Gets the number of clients hosting segments of tracked file
+    # @param self Reference to this object
+    # @return Number of clients hosting segments of tracked file
     def get_num_hosts(self):
         return len(self.hosts)
 
+    ## Rewrites the information stored in this class back to the tracker file.
+    # @param self Reference to this object
     def _rewrite_file(self):
         if self.filename != '':
             # Remove outdated hosts
             self._remove_hosts()
             if os.path.isfile(self.filename + '.track'):
                 os.remove(self.filename + '.track')
+
+            #Write tracked file info to tracker file
             tracker_file = open(self.filename + '.track', 'w')
             tracker_file.write('Filename: ' + self.filename + '\n')
             tracker_file.write('Filesize: ' + str(self.file_size) + '\n')
             tracker_file.write('Description: ' + self.description + '\n')
             tracker_file.write('MD5: ' + self.md5 + '\n')
 
+            #Write valid host information to tracker file
             for host in self.hosts:
                 tracker_file.write(host.ip_address + ":")
                 tracker_file.write(str(host.port) + ":")
@@ -237,6 +341,8 @@ class TrackerFile():
 
             tracker_file.close()
 
+    ## Removes invalid (or out-dated) hosts from the list of hosts.
+    # @param self Reference to this object
     def _remove_hosts(self):
         current_time = long(time.time())
         for host in self.hosts[:]:
