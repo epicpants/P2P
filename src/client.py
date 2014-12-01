@@ -34,12 +34,20 @@ CLIENT_PERC_DICT = {1: [0, 5, 10, 15, 20],
 # Read from config file
 confFile = "./client.conf"
 fileHandler = fileIO()
+
+# Load configuration into reference list
 config = fileHandler.loadConfig( confFile )
+
+# Determine current hostname
 config["CLIENT_IP"] = socket.gethostname()
 
+# Multithreading resource lock
 THREAD_LOCK = threading.Lock()
+
+# List of (start_byte, end_byte) tuples indicating ranges of bytes not yet written
+unwritten_bytes = [(0, config["TARGET_FILE_SIZE"])]
+
 PERC_BYTES_DICT = {}
-unwritten_bytes = [(0, config["TARGET_FILE_SIZE"])]  # list of (start_byte, end_byte) tuples indicating ranges of bytes not yet written
 for percent in range(101):  # [0, 100]
     mod = percent % 5
     if mod == 0:  # divisible by 5
@@ -48,6 +56,10 @@ for percent in range(101):  # [0, 100]
         PERC_BYTES_DICT[percent] = PERC_BYTES_DICT[percent - 1] + 1
 
 
+## Uses time_slot parameter to determine segment specifics
+#   by means of a stored lookup dictionary: CLIENT_PERC_DICT
+#   Returns percent and bytes ranges: percent_low, percent_high, start_byte, end_byte
+# @param time_slot Integer defining which timeslot a client is using (1-5).
 def advertise_info(time_slot):
     if time_slot == 0:
         percent_low = config["CLIENT_PERC_DICT"][client_num][0]
@@ -61,6 +73,10 @@ def advertise_info(time_slot):
     return percent_low, percent_high, start_byte, end_byte
 
 
+## Parses host line from tracker file to determine the starting
+#   byte range for the given host, as well as configured number of bytes.
+#   Returns; start_byte, num_bytes
+# @param host Single Host line from Tracker File
 def get_bytes_to_req(host):
     THREAD_LOCK.acquire()
     byte_range = [(start, end) for (start, end) in unwritten_bytes if host.start_byte < end and host.start_byte >= start]
@@ -75,11 +91,16 @@ def get_bytes_to_req(host):
     return start_byte, num_bytes
 
 
-def update_unwritten_bytes(start_byte, num_bytes):  # should only be called from within critical section
+##
+#   Note: Should only be called from within critical section
+# @param start_byte
+# @param num_bytes
+def update_unwritten_bytes(start_byte, num_bytes):
     byte_range = [(start, end) for (start, end) in unwritten_bytes if start_byte < end and start_byte >= start]
     if len(byte_range) == 0:
         return
     (old_start, old_end) = byte_range[0]
+
     # split the range of bytes into new ranges that effectively removes the range of data we just wrote
     (start1, end1) = (old_start, start_byte - 1)
     (start2, end2) = (start_byte + num_bytes + 1, old_end)
@@ -90,6 +111,11 @@ def update_unwritten_bytes(start_byte, num_bytes):  # should only be called from
     unwritten_bytes.remove(byte_range[0])
 
 
+## Parser for CLI. Recognizes the following commands (case insensitive)...
+#   createtracker "filename"    -   creates tracker file for specified file
+#   list                        -   lists available tracker files
+#   get "tracker-file"          -   requests file specified in tracker-file
+#   updatetracker "tracker-file"    -   updates server with info in tracker-file
 def command_line_interface():
     print "P2P CLI Started"
     user_command_input = None
@@ -121,7 +147,9 @@ def command_line_interface():
             print "Command not recognized"
 
 
-def req_list():  # return whether list contains TARGET_FILE
+## Requests listing of available tracker files on server.
+#   Returns true if server responds with info, false otherwise.
+def req_list():
     has_target_file = False
     num_files = 0
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -146,7 +174,11 @@ def req_list():  # return whether list contains TARGET_FILE
     return has_target_file
 
 
-def get_tracker_file():  # 'get' command for server, return true if got tracker file
+## Implementation of 'GET' command for server. Currently uses the
+#   tracker file specified in the clients configuration file.
+#   Returns true if there is an error downloading the file,
+#   specifically if there is an MD5 mismatch with the stored value.
+def get_tracker_file():
     error = True
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect((server_address, config["SERVER_PORT"]))
@@ -182,6 +214,12 @@ def get_tracker_file():  # 'get' command for server, return true if got tracker 
     return error
 
 
+## Threadable GET implementation for acquiring data from peers.
+#   Called by get_file(). Writes data to writer parameter.
+# @param peer_address Specifies the peer to request data from.
+# @param start_byte Specifies the beginning byte to request.
+# @param num_bytes Specifies the number of bytes to request.
+# @param writer mmap file handler, see: http://pymotw.com/2/mmap/
 def thread_handler(peer_address, start_byte, num_bytes, writer):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     sock.connect((peer_address, config["PEER_PORT"]))
@@ -218,12 +256,19 @@ def thread_handler(peer_address, start_byte, num_bytes, writer):
     sock.close()
 
 
-def get_file():  # 'get' command for peers, return true if file download successful
+## Initializes 'GET' command for peers, using thread_handler() to acquire data.
+#   Uses target file specified by clients config file to determine request.
+#   Returns true if file download successful.
+def get_file():
     while get_tracker_file():
         pass  # loop until successfully have tracker file
 
+    # Create file handle for target file
     target_file = open(config["TARGET_FILE"], 'wb+')
-    writer = mmap.mmap(target_file.fileno(), config["TARGET_FILE_SIZE"])  # create blank file of specified size
+
+    # Create memory mapped writer to target file of specified size
+    # For details, see: http://pymotw.com/2/mmap/
+    writer = mmap.mmap(target_file.fileno(), config["TARGET_FILE_SIZE"])
     tracker_file = tracker_parser.TrackerFile()
     while True:
         if tracker_file.parseTrackerFile('{0}.track'.format(config["TARGET_FILE"])):  # true if error
