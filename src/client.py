@@ -29,14 +29,20 @@ THREAD_LOCK = threading.Lock()
 # List of (start_byte, end_byte) tuples indicating ranges of bytes not yet written
 unwritten_bytes = [(0, config["TARGET_FILE_SIZE"])]
 
-PERC_BYTES_DICT = {}
-for percent in range(101):  # [0, 100]
-    mod = percent % 5
-    if mod == 0:  # divisible by 5
-        PERC_BYTES_DICT[percent] = long(float(percent)/100 * config["TARGET_FILE_SIZE"])
-    elif mod == 1:
-        PERC_BYTES_DICT[percent] = PERC_BYTES_DICT[percent - 1] + 1
 
+## Dictionary for storing...
+PERC_BYTES_DICT = {}
+
+## Initializes PERC_BYTES_DICT
+def init_byte_dict():
+    for percent in range(101):  # [0, 100]
+        mod = percent % 5
+        if mod == 0:  # divisible by 5
+            PERC_BYTES_DICT[percent] = long(float(percent)/100 * config["TARGET_FILE_SIZE"])
+        elif mod == 1:
+            PERC_BYTES_DICT[percent] = PERC_BYTES_DICT[percent - 1] + 1
+
+init_byte_dict()
 
 ## Uses time_slot parameter to determine segment specifics using a stored lookup dictionary: CLIENT_PERC_DICT
 # @return Percent and bytes ranges: percent_low, percent_high, start_byte, end_byte
