@@ -1,3 +1,5 @@
+## @package server Implementation of file sharing server
+
 import hashlib
 import socket
 import os
@@ -5,23 +7,34 @@ import re
 from threading import Thread
 import tracker_parser
 
-SERVER_PORT = 7777
+##Port that the file sharing server listens on
+SERVER_PORT = 7777 
+##Maximum size of data segments to send in bytes
 CHUNK_SIZE = 1024
+##Default directory to search for tracker files
 SERVER_DIR = '.'
 
 
+## Obtains a list of names of the tracker files.
+# @return List of names of tracker files
 def get_tracker_files():
     dir = os.listdir(SERVER_DIR)
     tracker_files = [tracker for tracker in dir if os.path.isfile(tracker) and tracker.find('.track') != -1]
     return tracker_files
 
 
+## Handles the server-side communication with the client for the LIST command.
+# @param conn Socket object connected to client
+# @param addr Address of the remote client connected to the server
+# @param command LIST command submitted by the client
 def list_command(conn, addr, command):
     print "Received list command from {}".format(addr[0])
     tracker_files = get_tracker_files()
     num_files = len(tracker_files)
     conn.sendall("REP LIST {0}".format(str(num_files)))
     count = 1
+
+    # Obtains filename, filesize, and md5 for each tracker file to send to client
     for tracker in tracker_files:
         tracker_file = tracker_parser.TrackerFile()
         if not tracker_file.parseTrackerFile(tracker):
@@ -39,10 +52,16 @@ def list_command(conn, addr, command):
     conn.close()
 
 
+## Handles the server-side communication with the client for the GET command.
+# @param conn Socket object connected to client
+# @param addr Address of the remote client connected to the server
+# @param command GET command submitted by the client
 def get_command(conn, addr, command):
     print "Received get command from {}".format(addr[0])
     tracker_filename = ''
     match = re.match(r"get\s(.+)", command.lower())
+
+    # Open file or send error message to client
     if match:
         tracker_filename = match.group(1)
         if os.path.isfile(tracker_filename):
@@ -52,6 +71,7 @@ def get_command(conn, addr, command):
     else:
         conn.send('ERROR NO FILENAME')
 
+    #Calculate MD5 Hash of tracker file
     tracker_file = open(tracker_filename, 'rb')
     block_size=2**20
     md5 = hashlib.md5()
@@ -65,10 +85,16 @@ def get_command(conn, addr, command):
     conn.send('REP GET END {0}'.format(md5.hexdigest()))
 
 
+## Handles the server-side communication with the client for the CREATETRACKER command.
+# @param conn Socket object connected to client
+# @param addr Address of the remote client connected to the server
+# @param command CREATETRACKER command submitted by the client
 def createtracker(conn, addr, command):
     print "Received createtracker command from {}".format(addr[0])
     tracker_file = tracker_parser.TrackerFile()
     status = tracker_parser.FILE_FAIL
+
+    # Create tracker file or send error message back to client
     try:
         status = tracker_file.create(command)
     except:
@@ -82,10 +108,16 @@ def createtracker(conn, addr, command):
         conn.send('createtracker fail')
 
 
+## Handles the server-side communication with the client for the UPDATETRACKER command.
+# @param conn Socket object connected to client
+# @param addr Address of the remote client connected to the server
+# @param command UPDATETRACKER command submitted by the client
 def updatetracker(conn, addr, command):
     print "Received updatetracker command from {}".format(addr[0])
     tracker_file = tracker_parser.TrackerFile()
     status = tracker_parser.FILE_FAIL
+
+    # Update tracker file or send error message back to client
     try:
         status = tracker_file.update(command)
     except:
@@ -99,9 +131,14 @@ def updatetracker(conn, addr, command):
         conn.send('updatetracker fail')
 
 
+## Handle commands from client.
+# @param client_conn Socket object connected to client
+# @param client_addr Address of the remote client connected to the server
 def handle_client(client_conn, client_addr):
     try:
         data = client_conn.recv(CHUNK_SIZE)
+
+        # Call appropriate command-handling function or send error message to client
         if data:
             if data.lower() == "req list" or data.lower() == "<req list>":
                 list_command(client_conn, client_addr, data)
@@ -123,6 +160,8 @@ sock.bind(('', SERVER_PORT))
 print "Bound socket to port {}".format(SERVER_PORT)
 sock.listen(5)
 print "Listening for clients..."
+
+# Open socket and listen for commands from client
 try:
     while True:
         (connection, addr) = sock.accept()
