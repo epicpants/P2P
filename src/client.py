@@ -39,7 +39,7 @@ for percent in range(101):  # [0, 100]
 
 
 ## Uses time_slot parameter to determine segment specifics using a stored lookup dictionary: CLIENT_PERC_DICT
-#   Returns percent and bytes ranges: percent_low, percent_high, start_byte, end_byte
+# @return Percent and bytes ranges: percent_low, percent_high, start_byte, end_byte
 # @param time_slot Integer defining which timeslot a client is using (1-5).
 def advertise_info(time_slot):
     if time_slot == 0:
@@ -55,7 +55,8 @@ def advertise_info(time_slot):
 
 
 ## Parses host line from tracker file to determine the starting byte range for the given host, as well as
-# configured number of bytes. Returns: start_byte, num_bytes
+# configured number of bytes.
+# @return Integers start_byte, num_bytes
 # @param host Single Host line from Tracker File
 def get_bytes_to_req(host):
     THREAD_LOCK.acquire()
@@ -127,7 +128,8 @@ def command_line_interface():
             print "Command not recognized"
 
 
-## Requests listing of available tracker files on server. Returns true if server responds with info, false otherwise.
+## Requests listing of available tracker files on server.
+# @return Boolean value: true if server responds with info, false otherwise.
 def req_list():
     has_target_file = False
     num_files = 0
@@ -154,7 +156,8 @@ def req_list():
 
 
 ## Implementation of 'GET' command for server. Currently uses the tracker file specified in the clients
-# configuration file. Returns true if there is an error downloading the file, specifically if there is an MD5
+# configuration file.
+# @return Boolean value: true if there is an error downloading the file, specifically if there is an MD5
 # mismatch with the stored value.
 def get_tracker_file():
     error = True
@@ -239,6 +242,7 @@ def thread_handler(peer_address, start_byte, num_bytes, writer):
 
 ## Initializes 'GET' command for peers, using thread_handler() to acquire data. Uses target file specified by
 # clients config file to determine request.
+# @return Boolean value: true if download successful, false otherwise
 def get_file():
     while get_tracker_file():
         pass  # loop until successfully have tracker file
@@ -275,7 +279,8 @@ def get_file():
 
 
 ## Updates server with information stored in local tracker file. Used after client acquires additional data to
-# be advertised. Returns whether command was successfully received by server.
+# be advertised.
+# @return Boolean error value: false if command was successfully received by server, true if error encountered
 # @param start_byte Starting byte to be advertised by client.
 # @param end_byte  End byte to be advertised by client.
 def update_command(start_byte, end_byte):
@@ -300,7 +305,8 @@ def update_command(start_byte, end_byte):
 
 
 ## Requests server create a tracker file for the local target file specified in the configuration file.
-#   Used to begin advertising data to be shared. Returns whether command was successfully received by server.
+#   Used to begin advertising data to be shared.
+# @return Boolean error value: false if command was successfully received by server, true if error encountered
 def create_command():
     error = False
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -398,46 +404,47 @@ def timer_routine(get_update=False):
         if time_slot > 4:
             time_slot = 4
 
+## Main entry routine. Parses command line parameters to determine client behavior.
+def main():
+	if len(sys.argv) != 4:
+		print "Incorrect usage. Correct usage = python client.py <server_address> <0/1 for snd/rcv> <client num>"
+		exit(1)
+	server_address = sys.argv[1]
+	client_type = sys.argv[2]
+	client_num = sys.argv[3]
 
-"""
-Entry point
-"""
-if len(sys.argv) != 4:
-    print "Incorrect usage. Correct usage = python client.py <server_address> <0/1 for snd/rcv> <client num>"
-    exit(1)
-server_address = sys.argv[1]
-client_type = sys.argv[2]
-client_num = sys.argv[3]
+	try:
+		if client_type == config["SND"]:
 
-try:
-    if client_type == config["SND"]:
+			# Create tracker file
+			while create_command():
+				pass
 
-        # Create tracker file
-        while create_command():
-            pass
+			# Thread to update server periodically
+			update_thread = threading.Thread(target=timer_routine)
+			update_thread.start()
 
-        # Thread to update server periodically
-        update_thread = threading.Thread(target=timer_routine)
-        update_thread.start()
+			# Begin listener routine
+			listen_for_peers()
 
-        # Begin listener routine
-        listen_for_peers()
+		else:  # client_type == config["RCV"]
 
-    else:  # client_type == config["RCV"]
+			# Thread to request list from server periodically
+			list_thread = threading.Thread(target=timer_routine)
+			list_thread.start()
+			list_thread.join()
 
-        # Thread to request list from server periodically
-        list_thread = threading.Thread(target=timer_routine)
-        list_thread.start()
-        list_thread.join()
+			# Thread to update server periodically
+			get_update_thread = threading.Thread(target=timer_routine, args=(True,))
+			get_update_thread.start()
 
-        # Thread to update server periodically
-        get_update_thread = threading.Thread(target=timer_routine, args=(True,))
-        get_update_thread.start()
+			# Begin downloading routine
+			download_succ = get_file()
+			if download_succ:
+				print "I am client_{0} and I received the file correctly!".format(client_num)
 
-        # Begin downloading routine
-        download_succ = get_file()
-        if download_succ:
-            print "I am client_{0} and I received the file correctly!".format(client_num)
+	except KeyboardInterrupt:
+		print
 
-except KeyboardInterrupt:
-    print
+if __name__ == "__main__":
+    main()
