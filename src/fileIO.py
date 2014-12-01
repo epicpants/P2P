@@ -7,7 +7,7 @@ import json, ast, os
 class fileIO:
 	
 	# default filename
-	defFile = "s:/project.conf"
+	defFile = "./project.conf"
 	
 	# sample config data
 	config = { "config1" : "A", "config2" : "B", "config3" : "C" }
