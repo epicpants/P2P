@@ -1,3 +1,5 @@
+## @package client Implementation of file sharing client
+
 import hashlib
 import mmap
 import os
@@ -10,26 +12,6 @@ import tracker_parser
 import threading
 from fileIO import fileIO
 
-# Old Config Options
-'''
-SND = 0
-RCV = 1
-SERVER_PORT = 7777
-PEER_PORT = 8888
-CHUNK_SIZE = 1024
-THREAD_TIMEOUT = 10
-UPDATE_SLEEP_TIME = 10  # in seconds
-LIST_SLEEP_TIME = 5  # in seconds
-TARGET_FILE = 'picture_wallpaper.jpg'
-TARGET_FILE_SIZE = 35738
-CLIENT_IP = socket.gethostname()
-CLIENT_DIR = '.'
-CLIENT_PERC_DICT = {1: [0, 5, 10, 15, 20],
-                    2: [21, 25, 30, 35, 40],
-                    3: [41, 45, 50, 55, 60],
-                    4: [61, 65, 70, 75, 80],
-                    5: [81, 85, 90, 95, 100]}
-'''
 
 # Read from config file
 confFile = "./client.conf"
@@ -56,7 +38,7 @@ for percent in range(101):  # [0, 100]
         PERC_BYTES_DICT[percent] = PERC_BYTES_DICT[percent - 1] + 1
 
 
-## Uses time_slot parameter to determine segment specifics by means of a stored lookup dictionary: CLIENT_PERC_DICT
+## Uses time_slot parameter to determine segment specifics using a stored lookup dictionary: CLIENT_PERC_DICT
 #   Returns percent and bytes ranges: percent_low, percent_high, start_byte, end_byte
 # @param time_slot Integer defining which timeslot a client is using (1-5).
 def advertise_info(time_slot):
@@ -72,8 +54,8 @@ def advertise_info(time_slot):
     return percent_low, percent_high, start_byte, end_byte
 
 
-## Parses host line from tracker file to determine the starting byte range for the given host, as well as configured
-# number of bytes. Returns: start_byte, num_bytes
+## Parses host line from tracker file to determine the starting byte range for the given host, as well as
+# configured number of bytes. Returns: start_byte, num_bytes
 # @param host Single Host line from Tracker File
 def get_bytes_to_req(host):
     THREAD_LOCK.acquire()
@@ -109,11 +91,11 @@ def update_unwritten_bytes(start_byte, num_bytes):
     unwritten_bytes.remove(byte_range[0])
 
 
-## Parser for CLI. Recognizes the following commands (case insensitive)...
-#   createtracker "filename"    -   creates tracker file for specified file
-#   list                        -   lists available tracker files
-#   get "tracker-file"          -   requests file specified in tracker-file
-#   updatetracker "tracker-file"    -   updates server with info in tracker-file
+## Parser for CLI. Recognizes the following commands (case insensitive)...\n
+#   createtracker "filename" - creates tracker file for specified file\n
+#   list - lists available tracker files\n
+#   get "tracker-file" - requests file specified in tracker-file\n
+#   updatetracker "tracker-file" - updates server with info in tracker-file\n
 def command_line_interface():
     print "P2P CLI Started"
     user_command_input = None
@@ -171,9 +153,9 @@ def req_list():
     return has_target_file
 
 
-## Implementation of 'GET' command for server. Currently uses the tracker file specified in the clients configuration
-# file. Returns true if there is an error downloading the file, specifically if there is an MD5 mismatch with the
-# stored value.
+## Implementation of 'GET' command for server. Currently uses the tracker file specified in the clients
+# configuration file. Returns true if there is an error downloading the file, specifically if there is an MD5
+# mismatch with the stored value.
 def get_tracker_file():
     error = True
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -210,7 +192,7 @@ def get_tracker_file():
     return error
 
 
-## Threadable GET implementation for acquiring data from peers. Called by get_file(). Writes data to writer parameter.
+## Threadable GET implementation for acquiring data from peers, called by get_file(). Outputs to writer param.
 # @param peer_address Specifies the peer to request data from.
 # @param start_byte Specifies the beginning byte to request.
 # @param num_bytes Specifies the number of bytes to request.
@@ -255,8 +237,8 @@ def thread_handler(peer_address, start_byte, num_bytes, writer):
     sock.close()
 
 
-## Initializes 'GET' command for peers, using thread_handler() to acquire data. Uses target file specified by clients
-# config file to determine request.
+## Initializes 'GET' command for peers, using thread_handler() to acquire data. Uses target file specified by
+# clients config file to determine request.
 def get_file():
     while get_tracker_file():
         pass  # loop until successfully have tracker file
@@ -292,8 +274,8 @@ def get_file():
     return True
 
 
-## Updates server with information stored in local tracker file. Used after client acquires additional data to be
-# advertised. Returns whether command was successfully received by server.
+## Updates server with information stored in local tracker file. Used after client acquires additional data to
+# be advertised. Returns whether command was successfully received by server.
 # @param start_byte Starting byte to be advertised by client.
 # @param end_byte  End byte to be advertised by client.
 def update_command(start_byte, end_byte):
@@ -340,7 +322,7 @@ def create_command():
     return error
 
 
-## Client listener for incoming peer connections. Accepts requests for advertised data, sends back requested segment.
+## Client listener for incoming peer connections. Accepts requests for advertised data, sends back segment.
 def listen_for_peers():
 
     listenerQueueLen = 5
