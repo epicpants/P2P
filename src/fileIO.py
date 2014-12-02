@@ -17,9 +17,9 @@ class fileIO:
 	def __init__(self): pass
 
 	## Saves dictionary to file
-	# param@ self Reference to this class instance
-	# param@ confData Python dictionary containing config data
-	# param@ filename String defining filename and path
+	# @param self Reference to this class instance
+	# @param confData Python dictionary containing config data
+	# @param filename String defining filename and path
 	def saveConfig(self, confData, fileName = defFile):
 		dir = os.path.dirname(fileName)
 		if not os.path.exists(dir):
@@ -30,9 +30,9 @@ class fileIO:
 		return
 
 	## Loads configuration data from file
-	# return@ a dictionary containing configuration pairs
-	# param@ self Reference to this class instance
-	# param@ filename String defining filename and path
+	# @return a dictionary containing configuration pairs
+	# @param self Reference to this class instance
+	# @param filename String defining filename and path
 	def loadConfig(self, fileName):
 		file = open( fileName, "r" )
 		
