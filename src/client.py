@@ -12,10 +12,6 @@ import tracker_parser
 import threading
 from fileIO import fileIO
 
-# Global Scope
-server_address = None
-client_type = None
-client_num = None
 
 # Read from config file
 confFile = "./client.conf"
@@ -415,49 +411,43 @@ def timer_routine(get_update=False):
             time_slot = 4
 
 ## Main entry routine. Parses command line parameters to determine client behavior.
-## Main entry routine. Parses command line parameters to determine client behavior.
-def main(argv):
+if len(sys.argv) != 4:
+    print "Incorrect usage. Correct usage = python client.py <server_address> <0/1 for snd/rcv> <client num>"
+    exit(1)
 
-	if len(argv) != 4:
-		print "Incorrect usage. Correct usage = python client.py <server_address> <0/1 for snd/rcv> <client num>"
-		exit(1)
+server_address = sys.argv[1]
+client_type = sys.argv[2]
+client_num = sys.argv[3]
 
-	server_address = sys.argv[1]
-	client_type = sys.argv[2]
-	client_num = sys.argv[3]
+try:
+    if client_type == config["SND"]:
 
-	try:
-		if client_type == config["SND"]:
+        # Create tracker file
+        while create_command():
+            pass
 
-			# Create tracker file
-			while create_command():
-				pass
+        # Thread to update server periodically
+        update_thread = threading.Thread(target=timer_routine)
+        update_thread.start()
 
-			# Thread to update server periodically
-			update_thread = threading.Thread(target=timer_routine)
-			update_thread.start()
+        # Begin listener routine
+        listen_for_peers()
 
-			# Begin listener routine
-			listen_for_peers()
+    else:  # client_type == config["RCV"]
 
-		else:  # client_type == config["RCV"]
+        # Thread to request list from server periodically
+        list_thread = threading.Thread(target=timer_routine)
+        list_thread.start()
+        list_thread.join()
 
-			# Thread to request list from server periodically
-			list_thread = threading.Thread(target=timer_routine)
-			list_thread.start()
-			list_thread.join()
+        # Thread to update server periodically
+        get_update_thread = threading.Thread(target=timer_routine, args=(True,))
+        get_update_thread.start()
 
-			# Thread to update server periodically
-			get_update_thread = threading.Thread(target=timer_routine, args=(True,))
-			get_update_thread.start()
+        # Begin downloading routine
+        download_succ = get_file()
+        if download_succ:
+            print "I am client_{0} and I received the file correctly!".format(client_num)
 
-			# Begin downloading routine
-			download_succ = get_file()
-			if download_succ:
-				print "I am client_{0} and I received the file correctly!".format(client_num)
-
-	except KeyboardInterrupt:
-		print
-		
-if __name__ == "__main__":
-    main(sys.argv)
+except KeyboardInterrupt:
+    print
