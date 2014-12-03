@@ -4,6 +4,7 @@ import hashlib
 import socket
 import os
 import re
+import sys
 from threading import Thread
 import tracker_parser
 
@@ -43,6 +44,7 @@ def list_command(conn, addr, command):
             file_name = tracker_file.get_filename()
             data = "{0} {1} {2} {3}".format(str(count), file_name, str(file_size), md5)
             conn.sendall(data)
+            print "+=+=+=data {0}".format(data)
             count += 1
         else:
             print 'Error parsing tracker file'
@@ -97,8 +99,8 @@ def createtracker(conn, addr, command):
     # Create tracker file or send error message back to client
     try:
         status = tracker_file.create(command)
-    except:
-        pass
+    except Exception as e:
+        print e
 
     if status == tracker_parser.FILE_SUCC:
         conn.send('createtracker succ')
@@ -145,6 +147,7 @@ def handle_client(client_conn, client_addr):
             elif data.lower().find("get") != -1:
                 get_command(client_conn, client_addr, data)
             elif data.lower().find("createtracker") != -1:
+                print "[Server]: create command {0}".format(data)
                 createtracker(client_conn, client_addr, data)
             elif data.lower().find("updatetracker") != -1:
                 updatetracker(client_conn, client_addr, data)
@@ -153,6 +156,11 @@ def handle_client(client_conn, client_addr):
     except:
         pass
 
+if len(sys.argv) != 2:
+  print "Incorrect usage. Correct usage = python server.py <path to server directory"
+  exit(1)
+
+os.chdir(sys.argv[1])
 
 print "Starting server, hostname = {}".format(socket.gethostname())
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

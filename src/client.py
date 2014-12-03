@@ -48,12 +48,12 @@ init_byte_dict()
 # @param time_slot Integer defining which timeslot a client is using (1-5).
 def advertise_info(time_slot):
     if time_slot == 0:
-        percent_low = config["CLIENT_PERC_DICT"][client_num][0]
+        percent_low = config["CLIENT_PERC_DICT"][str(client_num)][0]
     elif client_num != 1:
-        percent_low = config["CLIENT_PERC_DICT"][client_num][time_slot - 1] + 1
+        percent_low = config["CLIENT_PERC_DICT"][str(client_num)][time_slot - 1]
     else:
         percent_low = 0
-    percent_high = config["CLIENT_PERC_DICT"][client_num][time_slot]
+    percent_high = config["CLIENT_PERC_DICT"][str(client_num)][time_slot]
     start_byte = PERC_BYTES_DICT[percent_low]
     end_byte = PERC_BYTES_DICT[percent_high]
     return percent_low, percent_high, start_byte, end_byte
@@ -147,14 +147,12 @@ def req_list():
     match = re.match(r"REP\sLIST\sBEGIN\s(\d+)", response)
     if match:
         num_files = match.group(1)
-    count = 1
-    while count <= num_files:
+    while True:
         response = sock.recv(config["CHUNK_SIZE"])
         if not response:
             break
         if response.find(config["TARGET_FILE"]) != -1:
             has_target_file = True
-        count += 1
     response = sock.recv(config["CHUNK_SIZE"])
     sock.close()
     return has_target_file
@@ -207,7 +205,7 @@ def get_tracker_file():
 # @param writer mmap file handler, see: http://pymotw.com/2/mmap/
 def thread_handler(peer_address, start_byte, num_bytes, writer):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((peer_address, config["PEER_PORT"]))
+    sock.connect((peer_address, PEER_PORT))
     sock.send('GET {0} {1} {2}'.format(config["TARGET_FILE"], start_byte, num_bytes))
     # Confirm 'get' request
     data = sock.recv(config["CHUNK_SIZE"])
@@ -297,7 +295,7 @@ def update_command(start_byte, end_byte):
     tracker_file = tracker_parser.TrackerFile()
 
     # Generate update command string
-    command = tracker_file.updateCommand(config["TARGET_FILE"], config["PEER_PORT"], start_byte, end_byte)
+    command = tracker_file.updateCommand(config["TARGET_FILE"], PEER_PORT, start_byte, end_byte)
 
     sock.send(command)
     response = sock.recv(config["CHUNK_SIZE"])
@@ -321,7 +319,7 @@ def create_command():
     tracker_file = tracker_parser.TrackerFile()
 
     # Generate creation command string
-    command = tracker_file.createCommand(config["TARGET_FILE"], config["PEER_PORT"], '_')
+    command = tracker_file.createCommand(config["TARGET_FILE"], PEER_PORT, '_')
 
     sock.send(command)
     response = sock.recv(config["CHUNK_SIZE"])
@@ -330,59 +328,64 @@ def create_command():
     elif response.find('succ') == -1:
         error = True
     sock.close()
+    print "Client {0}, [create] error status = {1}".format(client_num, error)
     return error
 
 
 ## Client listener for incoming peer connections. Accepts requests for advertised data, sends back segment.
 def listen_for_peers():
-
     listenerQueueLen = 5
 
     # Create socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.bind(('', config["PEER_PORT"]))
+    #sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind(('', PEER_PORT))
+    print "---------------Client {0} successfully bound".format(client_num)
 
     # Listen for incoming connections, using backlog of specified length
     sock.listen(listenerQueueLen)
 
-    while True:
+    try:
+        while True:
 
-        # Accept incoming connection
-        (connection, addr) = sock.accept()
-        filename = ''
-        start_byte = None
-        req = connection.recv(config["CHUNK_SIZE"])
-        if not req:
-            continue
+            # Accept incoming connection
+            (connection, addr) = sock.accept()
+            filename = ''
+            start_byte = None
+            req = connection.recv(config["CHUNK_SIZE"])
+            if not req:
+                continue
 
-        # Parse command string
-        match = re.match(r"get\s([^\s]+)\s(\d+)\s(\d+)", req.lower())
-        if match:
-            filename = match.group(1)
-            start_byte = long(match.group(2))
-            num_bytes = long(match.group(3))
+            # Parse command string
+            match = re.match(r"get\s([^\s]+)\s(\d+)\s(\d+)", req.lower())
+            if match:
+                filename = match.group(1)
+                start_byte = long(match.group(2))
+                num_bytes = long(match.group(3))
 
-            # Determine if file is valid
-            if os.path.isfile(filename):
-                connection.send('REP GET BEGIN')
+                # Determine if file is valid
+                if os.path.isfile(filename):
+                    connection.send('REP GET BEGIN')
+                else:
+                    connection.send('ERROR FILE DNE')
+                    continue
+                if num_bytes > config["CHUNK_SIZE"]:
+                    connection.send('GET invalid')
+                    continue
             else:
-                connection.send('ERROR FILE DNE')
+                connection.send('ERROR NO FILENAME')
                 continue
-            if num_bytes > config["CHUNK_SIZE"]:
-                connection.send('GET invalid')
-                continue
-        else:
-            connection.send('ERROR NO FILENAME')
-            continue
 
-        # Send requested segment
-        req_file = open(filename, 'rb')
-        req_file.seek(start_byte)
-        data = req_file.read(num_bytes)
-        connection.send(data)
+            # Send requested segment
+            req_file = open(filename, 'rb')
+            req_file.seek(start_byte)
+            data = req_file.read(num_bytes)
+            connection.send(data)
 
-        # Send trailing closure
-        connection.send('REP GET END')
+            # Send trailing closure
+            connection.send('REP GET END')
+    finally:
+            sock.close()
 
 
 ## Threadable routine for periodically updating server.
@@ -415,13 +418,16 @@ if len(sys.argv) != 5:
     exit(1)
 
 server_address = sys.argv[1]
-client_type = sys.argv[2]
-client_num = sys.argv[3]
+client_type = int(sys.argv[2])
+client_num = int(sys.argv[3])
 os.chdir(sys.argv[4])
+
+PEER_PORT = config["PEER_PORT"] + client_num
+
+print "Hello, I am client {0}, directory = {1}, client_type = {2}".format(client_num, os.getcwd(), client_type)
 
 try:
     if client_type == config["SND"]:
-
         # Create tracker file
         while create_command():
             pass

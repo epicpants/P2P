@@ -36,3 +36,6 @@
 */client
 **.track
 *.idea
+**.db
+**.jpg
+**.pyc

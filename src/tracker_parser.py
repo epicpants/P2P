@@ -33,7 +33,7 @@ class HostInfo():
     # @param self Reference to this object
     def __init__(self):
         self.ip_addr = ''
-        self.port = None
+        self.port = int(0)
         self.start_byte = None
         self.end_byte = None
         self.time_stamp = None
@@ -84,7 +84,7 @@ class TrackerFile():
 
         if not os.path.isfile(tracker_filename):
             error = True
-            print "Tracker file does not exist"
+            print "Tracker file {0} does not exist".format(tracker_filename)
             return error
 
         tracker_file = open(tracker_filename, 'r')
@@ -150,14 +150,14 @@ class TrackerFile():
             tracker_filename += '.track'
 
         if not os.path.isfile(tracker_filename):
-            print "Tracker file does not exist"
+            print "Tracker file {0} does not exist [update]".format(tracker_filename)
             return FILE_ERR
 
         # Collect information about the host from the command
         start_byte = tokens[2]
         end_byte = tokens[3]
         ip_address = tokens[4]
-        port = tokens[5]
+        port = int(tokens[5])
         timestamp = long(time.time())  # whole number of seconds since epoch
 
         self.parseTrackerFile(tracker_filename)
@@ -191,21 +191,24 @@ class TrackerFile():
             return FILE_ERR
 
         tracker_filename = tokens[1]
+        self.filename = tracker_filename.replace(".track", "")
 
         if tracker_filename.find('.track') == -1:
             tracker_filename += '.track'
 
+        """
         # Check if file exists
         if not os.path.isfile(tracker_filename):
-            print "Tracker file does not exist"
+            print "Tracker file {0} does not exist [create]".format(tracker_filename)
             return FILE_ERR
+        """
 
         # Parse command
         self.file_size = tokens[2]
         self.description = tokens[3]
         self.md5 = tokens[4]
         ip_address = tokens[5]
-        port = tokens[6]
+        port = int(tokens[6])
 
         start_byte = 0
         end_byte = self.file_size
@@ -237,12 +240,12 @@ class TrackerFile():
     def updateCommand(self, filename, port, start_byte, end_byte):
         #Generate command to send to server
         cmd = "updatetracker " + filename + " "   #File name
-        cmd += start_byte + " " + end_byte + " "  #File chunk
+        cmd += str(start_byte) + " " + str(end_byte) + " "  #File chunk
 
         #Get local IP address
         cmd += str(socket.gethostbyname(socket.gethostname())) + " "
 
-        cmd += port + "\n" #Port number
+        cmd += str(port) + "\n" #Port number
         return cmd
 
     ## Generates the CREATETRACKER command for the client
@@ -271,8 +274,7 @@ class TrackerFile():
         #Get local IP address
         cmd += str(socket.gethostbyname(socket.gethostname())) + " "
 
-        cmd += port + "\n" #Port number
-
+        cmd += str(port) + "\n" #Port number
         return cmd
 
     ## Gets the filename of the tracked file.
@@ -326,6 +328,7 @@ class TrackerFile():
 
             #Write tracked file info to tracker file
             tracker_file = open(self.filename + '.track', 'w')
+            print "Made it to rewrite file"
             tracker_file.write('Filename: ' + self.filename + '\n')
             tracker_file.write('Filesize: ' + str(self.file_size) + '\n')
             tracker_file.write('Description: ' + self.description + '\n')
@@ -333,7 +336,7 @@ class TrackerFile():
 
             #Write valid host information to tracker file
             for host in self.hosts:
-                tracker_file.write(host.ip_address + ":")
+                tracker_file.write(host.ip_addr + ":")
                 tracker_file.write(str(host.port) + ":")
                 tracker_file.write(str(host.start_byte) + ":")
                 tracker_file.write(str(host.end_byte) + ":")
