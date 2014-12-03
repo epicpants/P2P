@@ -334,6 +334,7 @@ def create_command():
 
 ## Client listener for incoming peer connections. Accepts requests for advertised data, sends back segment.
 def listen_for_peers():
+
     listenerQueueLen = 5
 
     # Create socket
@@ -343,7 +344,7 @@ def listen_for_peers():
     print "---------------Client {0} successfully bound".format(client_num)
 
     # Listen for incoming connections, using backlog of specified length
-    sock.listen(listenerQueueLen)
+    sock.listen(config["LISTENER_BACKLOG"])
 
     try:
         while True:
