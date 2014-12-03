@@ -6,7 +6,6 @@ import os
 import re
 import socket
 import sys
-import StringIO
 import time
 import tracker_parser
 import threading
@@ -411,13 +410,14 @@ def timer_routine(get_update=False):
             time_slot = 4
 
 ## Main entry routine. Parses command line parameters to determine client behavior.
-if len(sys.argv) != 4:
-    print "Incorrect usage. Correct usage = python client.py <server_address> <0/1 for snd/rcv> <client num>"
+if len(sys.argv) != 5:
+    print "Incorrect usage. Correct usage = python client.py <server_address> <0/1 for snd/rcv> <client num> <path to directory>"
     exit(1)
 
 server_address = sys.argv[1]
 client_type = sys.argv[2]
 client_num = sys.argv[3]
+os.chdir(sys.argv[4])
 
 try:
     if client_type == config["SND"]:
