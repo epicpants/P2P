@@ -245,7 +245,11 @@ def get_tracker_file():
 # @param writer mmap file handler, see: http://pymotw.com/2/mmap/
 def thread_handler(peer_address, peer_port, start_byte, num_bytes, writer):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((peer_address, peer_port))
+    try:
+        sock.connect((peer_address, peer_port))
+    except socket.error:
+        sock.close()
+        return
     req = "GET {0} {1} {2}".format(config["TARGET_FILE"], start_byte, num_bytes)
     # print "Client {0}, req = {1}".format(client_num, req)
     sock.send('GET {0} {1} {2}'.format(config["TARGET_FILE"], start_byte, num_bytes))
