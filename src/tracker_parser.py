@@ -114,7 +114,7 @@ class TrackerFile():
                 self.md5 = match4.group(1)
 
             # Get the information about the clients hosting the file
-            host = re.match(r"^([^:\s]+):([^:\s]+):([^:\s]+):([^:\s]+):([^:\s]+)", line)
+            host = re.match(r"^([^:\s]+):([^:\s]+):([^:\s]+):([^:\s]+):(\d+)", line)
             if host:
                 new_host = HostInfo()
                 new_host.ip_addr = host.group(1)
@@ -136,6 +136,7 @@ class TrackerFile():
     # @return The error status is returned (FILE_SUCC, FILE_FAIL, FILE_ERR)
     def update(self, cmd=''):
         # If no command, remove old hosts
+        # print "^^^^^^^^^^^^^^^^^^[tracker parser update] cmd = {0}".format(cmd)
         if cmd == '':
             self._rewrite_file()
             return FILE_SUCC
@@ -163,7 +164,7 @@ class TrackerFile():
         self.parseTrackerFile(tracker_filename)
 
         # Update host if it exists or create new host if not found
-        update_hosts = [host for host in self.hosts if host.ip_address == ip_address]
+        update_hosts = [host for host in self.hosts if host.ip_addr == ip_address and host.port == port]
         if len(update_hosts) > 0:
             update_hosts[0].start_byte = start_byte
             update_hosts[0].end_byte = end_byte
@@ -323,12 +324,14 @@ class TrackerFile():
         if self.filename != '':
             # Remove outdated hosts
             self._remove_hosts()
+            """
             if os.path.isfile(self.filename + '.track'):
                 os.remove(self.filename + '.track')
+            """
 
             #Write tracked file info to tracker file
-            tracker_file = open(self.filename + '.track', 'w')
-            print "Made it to rewrite file"
+            tracker_file = open(self.filename + '.track', 'w+')
+            # print "Made it to rewrite file"
             tracker_file.write('Filename: ' + self.filename + '\n')
             tracker_file.write('Filesize: ' + str(self.file_size) + '\n')
             tracker_file.write('Description: ' + self.description + '\n')
@@ -336,6 +339,7 @@ class TrackerFile():
 
             #Write valid host information to tracker file
             for host in self.hosts:
+                # print "{0}:{1}:{2}:{3}:{4}:{5}".format(host.ip_addr, host.port, host.start_byte, host.end_byte, host.time_stamp)
                 tracker_file.write(host.ip_addr + ":")
                 tracker_file.write(str(host.port) + ":")
                 tracker_file.write(str(host.start_byte) + ":")

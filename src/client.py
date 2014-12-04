@@ -3,6 +3,7 @@
 import hashlib
 import mmap
 import os
+import random
 import re
 import socket
 import sys
@@ -28,6 +29,7 @@ THREAD_LOCK = threading.Lock()
 # List of (start_byte, end_byte) tuples indicating ranges of bytes not yet written
 unwritten_bytes = [(0, config["TARGET_FILE_SIZE"])]
 
+PEER_PORT = random.randrange(8100, 60000, 1)
 
 ## Dictionary for storing...
 PERC_BYTES_DICT = {}
@@ -43,18 +45,34 @@ def init_byte_dict():
 
 init_byte_dict()
 
+"""
+class HandleErrors():
+    def write(self, msg):
+        pass
+sys.stderr = HandleErrors()
+"""
+
 ## Uses time_slot parameter to determine segment specifics using a stored lookup dictionary: CLIENT_PERC_DICT
 # @return Percent and bytes ranges: percent_low, percent_high, start_byte, end_byte
 # @param time_slot Integer defining which timeslot a client is using (1-5).
 def advertise_info(time_slot):
+    if time_slot > 4:
+        time_slot = 4
     if time_slot == 0:
         percent_low = config["CLIENT_PERC_DICT"][str(client_num)][0]
+    else:
+        percent_low = config["CLIENT_PERC_DICT"][str(client_num)][time_slot - 1]
+
+    if time_slot > 1:
+        percent_low += 1
+    """
     elif client_num != 1:
         percent_low = config["CLIENT_PERC_DICT"][str(client_num)][time_slot - 1]
     else:
         percent_low = 0
+    """
     percent_high = config["CLIENT_PERC_DICT"][str(client_num)][time_slot]
-    start_byte = PERC_BYTES_DICT[percent_low]
+    start_byte = PERC_BYTES_DICT[config["CLIENT_PERC_DICT"][str(client_num)][0]]  # PERC_BYTES_DICT[percent_low]
     end_byte = PERC_BYTES_DICT[percent_high]
     return percent_low, percent_high, start_byte, end_byte
 
@@ -65,14 +83,18 @@ def advertise_info(time_slot):
 # @param host Single Host line from Tracker File
 def get_bytes_to_req(host):
     THREAD_LOCK.acquire()
-    byte_range = [(start, end) for (start, end) in unwritten_bytes if host.start_byte < end and host.start_byte >= start]
+    byte_range = [(start, end) for (start, end) in unwritten_bytes if host.start_byte < end and host.start_byte <= start]
     if len(byte_range) == 0:  # no bytes the host is offering need to be written
         THREAD_LOCK.release()
         return 0, 0
     start_byte = byte_range[0][0]  # take the start_byte of the first found tuple
     num_bytes = config["CHUNK_SIZE"]
     if start_byte + num_bytes > byte_range[0][1]:
-        num_bytes = byte_range[0][1] - start_byte  # + 1?
+        num_bytes = byte_range[0][1] - start_byte + 1  # -------------------- Aligning
+    """
+    output = open("out.txt", "a")
+    output.write("Bytes to req: start_byte = {0} | num_bytes = {1}\n".format(start_byte, num_bytes))
+    """
     THREAD_LOCK.release()
     return start_byte, num_bytes
 
@@ -89,12 +111,17 @@ def update_unwritten_bytes(start_byte, num_bytes):
 
     # split the range of bytes into new ranges that effectively removes the range of data we just wrote
     (start1, end1) = (old_start, start_byte - 1)
-    (start2, end2) = (start_byte + num_bytes + 1, old_end)
+    (start2, end2) = (start_byte + num_bytes, old_end)  # remove + 1
     if end1 > start1:
         unwritten_bytes.append((start1, end1))
     if end2 > start2:
         unwritten_bytes.append((start2, end2))
     unwritten_bytes.remove(byte_range[0])
+    """
+    output = open("update_unwritten.txt", "w")
+    for a, b in unwritten_bytes:
+        output.write("({0} {1})\n".format(a, b))
+    """
 
 
 ## Parser for CLI. Recognizes the following commands (case insensitive)...\n
@@ -165,18 +192,28 @@ def req_list():
 def get_tracker_file():
     error = True
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((server_address, config["SERVER_PORT"]))
-    sock.send('GET {0}.track'.format(config["TARGET_FILE"]))
-    data = sock.recv(config["CHUNK_SIZE"])
-    if not data:
+    try:
+        sock.connect((server_address, config["SERVER_PORT"]))
+    except socket.error:
+        sock.close()
         return error
-    elif data.find('REP GET BEGIN') == -1:
+    sock.send('GET {0}.track'.format(config["TARGET_FILE"]))
+    try:
+        data = sock.recv(config["CHUNK_SIZE"])
+        if not data:
+            return error
+        elif data.find('REP GET BEGIN') == -1:
+            return error
+    except socket.error:
+        sock.close()
         return error
 
     tracker_filename = '{0}.track'.format(config["TARGET_FILE"])
+    """
     if os.path.isfile(tracker_filename):
         os.remove(tracker_filename)
-    tracker_file = open(tracker_filename, 'wb')
+    """
+    tracker_file = open(tracker_filename, 'wb+')
     calc_tracker_md5 = hashlib.md5()
     rec_tracker_md5 = ''
 
@@ -194,6 +231,9 @@ def get_tracker_file():
     if str(calc_tracker_md5.hexdigest()) == rec_tracker_md5:
         error = False
     sock.close()
+    tracker = tracker_parser.TrackerFile()
+    tracker.parseTrackerFile(tracker_filename)
+    tracker._rewrite_file()
     tracker_file.close()
     return error
 
@@ -203,44 +243,56 @@ def get_tracker_file():
 # @param start_byte Specifies the beginning byte to request.
 # @param num_bytes Specifies the number of bytes to request.
 # @param writer mmap file handler, see: http://pymotw.com/2/mmap/
-def thread_handler(peer_address, start_byte, num_bytes, writer):
+def thread_handler(peer_address, peer_port, start_byte, num_bytes, writer):
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((peer_address, PEER_PORT))
+    sock.connect((peer_address, peer_port))
+    req = "GET {0} {1} {2}".format(config["TARGET_FILE"], start_byte, num_bytes)
+    # print "Client {0}, req = {1}".format(client_num, req)
     sock.send('GET {0} {1} {2}'.format(config["TARGET_FILE"], start_byte, num_bytes))
     # Confirm 'get' request
-    data = sock.recv(config["CHUNK_SIZE"])
-    if not data:
+    try:
+        data = sock.recv(config["CHUNK_SIZE"])
+        if not data:
+            sock.close()
+            return
+        elif data != 'REP GET BEGIN':
+            sock.close()
+            return
+    except socket.error:
         sock.close()
-        return
-    elif data != 'REP GET BEGIN':
-        sock.close()
-        return
 
     # Receive data
-    data = sock.recv(num_bytes)
-    if not data or len(data) != num_bytes:
+    try:
+        data = sock.recv(num_bytes)
+        if not data or len(data) != num_bytes:
+            sock.close()
+            # print "&&&&&&&&&&&&&&& client {0} got not data or wrong amount of bytes".format(client_num)
+            return
+
+         # Enter critical section
+        THREAD_LOCK.acquire()
+
+        # Write to file
+        writer.seek(start_byte)
+        writer.write(data)
+        writer.flush()
+
+        # Update byte roster
+        update_unwritten_bytes(start_byte, num_bytes)
+
+        THREAD_LOCK.release()
+    except socket.error:
         sock.close()
-        return
-
-    # Enter critical section
-    THREAD_LOCK.acquire()
-
-    # Write to file
-    writer.seek(start_byte)
-    writer.write(data)
-    writer.flush()
-
-    # Update byte roster
-    update_unwritten_bytes(start_byte, num_bytes)
-
-    THREAD_LOCK.release()
 
     # Confirm 'get' complete
-    data = sock.recv(config["CHUNK_SIZE"])
-    if not data:
+    try:
+        data = sock.recv(config["CHUNK_SIZE"])
+        if not data:
+            sock.close()
+            return
+    finally:
         sock.close()
         return
-    sock.close()
 
 
 ## Initializes 'GET' command for peers, using thread_handler() to acquire data. Uses target file specified by
@@ -252,10 +304,11 @@ def get_file():
 
     # Create file handle for target file
     target_file = open(config["TARGET_FILE"], 'wb+')
+    target_file.truncate(config["TARGET_FILE_SIZE"] + 1)
 
     # Create memory mapped writer to target file of specified size
     # For details, see: http://pymotw.com/2/mmap/
-    writer = mmap.mmap(target_file.fileno(), config["TARGET_FILE_SIZE"])
+    writer = mmap.mmap(target_file.fileno(), config["TARGET_FILE_SIZE"] + 1)
     tracker_file = tracker_parser.TrackerFile()
     while True:
         if tracker_file.parseTrackerFile('{0}.track'.format(config["TARGET_FILE"])):  # true if error
@@ -264,10 +317,14 @@ def get_file():
         threads = []
         for host in tracker_file.hosts:  # spawn a new thread for each host
             (start_byte, num_bytes) = get_bytes_to_req(host)
+            # print "//////// Client {0}, [get_file] num_bytes = {1}".format(client_num, num_bytes)
             if num_bytes > 0:
-                thread = threading.Thread(target=thread_handler, args=(host.ip_addr, start_byte, num_bytes, writer))
-                thread.start()
-                threads.append(thread)
+                thread = threading.Thread(target=thread_handler, args=(host.ip_addr, host.port, start_byte, num_bytes, writer))
+                try:
+                    thread.start()
+                    threads.append(thread)
+                except:
+                    pass
 
         # wait until all threads complete or timeout occurs
         timeout = 0
@@ -278,7 +335,20 @@ def get_file():
         if len(unwritten_bytes) == 0:  # no bytes left to be written - we're done!
             break
 
-    return True
+    target_file.truncate(config["TARGET_FILE_SIZE"])
+    # TODO: check md5
+    calc_md5 = hashlib.md5()
+    target_file.seek(0)
+    while True:
+        data = target_file.read(config["CHUNK_SIZE"])
+        if not data:
+            break
+        calc_md5.update(data)
+
+    if tracker_file.md5 == str(calc_md5.hexdigest()):
+        return True
+    else:
+        return False
 
 
 ## Updates server with information stored in local tracker file. Used after client acquires additional data to
@@ -289,7 +359,11 @@ def get_file():
 def update_command(start_byte, end_byte):
     error = False
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((server_address, config["SERVER_PORT"]))
+    try:
+        sock.connect((server_address, config["SERVER_PORT"]))
+    except socket.error:
+        sock.close()
+        return True
 
     # instantiate TrackerFile object
     tracker_file = tracker_parser.TrackerFile()
@@ -298,13 +372,17 @@ def update_command(start_byte, end_byte):
     command = tracker_file.updateCommand(config["TARGET_FILE"], PEER_PORT, start_byte, end_byte)
 
     sock.send(command)
-    response = sock.recv(config["CHUNK_SIZE"])
-    if not response:
-        error = True
-    elif response.find('succ') == -1:
-        error = True
-    sock.close()
-    return error
+    try:
+        response = sock.recv(config["CHUNK_SIZE"])
+        if not response:
+            error = True
+        elif response.find('succ') == -1:
+            error = True
+        sock.close()
+        return error
+    except:
+        sock.close()
+        return True
 
 
 ## Requests server create a tracker file for the local target file specified in the configuration file.
@@ -313,7 +391,11 @@ def update_command(start_byte, end_byte):
 def create_command():
     error = False
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect((server_address, config["SERVER_PORT"]))
+    try:
+        sock.connect((server_address, config["SERVER_PORT"]))
+    except socket.error:
+        sock.close()
+        return True
 
     # instantiate TrackerFile object
     tracker_file = tracker_parser.TrackerFile()
@@ -322,26 +404,36 @@ def create_command():
     command = tracker_file.createCommand(config["TARGET_FILE"], PEER_PORT, '_')
 
     sock.send(command)
-    response = sock.recv(config["CHUNK_SIZE"])
-    if not response:
-        error = True
-    elif response.find('succ') == -1:
-        error = True
-    sock.close()
-    print "Client {0}, [create] error status = {1}".format(client_num, error)
-    return error
+    try:
+        response = sock.recv(config["CHUNK_SIZE"])
+        if not response:
+            error = True
+        elif response.find('succ') == -1:
+            error = True
+        sock.close()
+        # print "Client {0}, [create] error status = {1}".format(client_num, error)
+        return error
+    except socket.error:
+        sock.close()
+        return True
 
 
 ## Client listener for incoming peer connections. Accepts requests for advertised data, sends back segment.
 def listen_for_peers():
 
     listenerQueueLen = 5
-
+    global PEER_PORT
     # Create socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     #sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    sock.bind(('', PEER_PORT))
-    print "---------------Client {0} successfully bound".format(client_num)
+
+    while True:
+        try:
+            sock.bind(('', PEER_PORT))
+            break
+        except socket.error:
+            PEER_PORT = random.randrange(8100, 60000, 1)
+    # print "---------------Client {0} successfully bound".format(client_num)
 
     # Listen for incoming connections, using backlog of specified length
     sock.listen(config["LISTENER_BACKLOG"])
@@ -398,7 +490,8 @@ def timer_routine(get_update=False):
             (percent_low, percent_high, start_byte, end_byte) = advertise_info(time_slot)
             if not update_command(start_byte, end_byte):  # an error occurred
                 update_command(start_byte, end_byte)  # try one more time
-            print "I am client_{0}, and I am advertising the following chunk of the file: {1}% to {2}%".format(client_num, percent_low, percent_high)
+            if time_slot <= 4:
+                print "I am client_{0}, and I am advertising the following chunk of the file: {1}% to {2}%".format(client_num, percent_low, percent_high)
             time.sleep(config["UPDATE_SLEEP_TIME"])
         elif not get_update:
             has_target_file = req_list()
@@ -410,8 +503,11 @@ def timer_routine(get_update=False):
                 get_tracker_file()  # try one more time
             time.sleep(config["UPDATE_SLEEP_TIME"])
         time_slot += 1
+        """
         if time_slot > 4:
             time_slot = 4
+        """
+    return
 
 ## Main entry routine. Parses command line parameters to determine client behavior.
 if len(sys.argv) != 5:
@@ -423,9 +519,7 @@ client_type = int(sys.argv[2])
 client_num = int(sys.argv[3])
 os.chdir(sys.argv[4])
 
-PEER_PORT = config["PEER_PORT"] + client_num
-
-print "Hello, I am client {0}, directory = {1}, client_type = {2}".format(client_num, os.getcwd(), client_type)
+# print "Hello, I am client {0}, directory = {1}, client_type = {2}".format(client_num, os.getcwd(), client_type)
 
 try:
     if client_type == config["SND"]:
@@ -439,6 +533,7 @@ try:
 
         # Begin listener routine
         listen_for_peers()
+        # TODO: make this end at some point
 
     else:  # client_type == config["RCV"]
 
@@ -455,6 +550,18 @@ try:
         download_succ = get_file()
         if download_succ:
             print "I am client_{0} and I received the file correctly!".format(client_num)
+        else:
+            print "I am client_{0} and I just didn't".format(client_num)
+
+    # print "About to exit :)"
+    # print "Client {0}, active threads = {1}".format(client_num, threading.activeCount())
+
+    """
+    for thread in threading.enumerate():
+        if thread.name != 'MainThread':
+            thread.exit()
+    """
+    # os._exit(0)
 
 except KeyboardInterrupt:
     print

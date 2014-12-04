@@ -1,17 +1,24 @@
 ## @package server Implementation of file sharing server
 
+from fileIO import fileIO
 import hashlib
 import socket
 import os
 import re
 import sys
-from threading import Thread
+import threading
 import tracker_parser
 
+# Read from config file
+confFile = "./client.conf"
+fileHandler = fileIO()
+
+# Load configuration into reference list
+config = fileHandler.loadConfig( confFile )
 ##Port that the file sharing server listens on
-SERVER_PORT = 7777 
+SERVER_PORT = config["SERVER_PORT"]
 ##Maximum size of data segments to send in bytes
-CHUNK_SIZE = 1024
+CHUNK_SIZE = config["CHUNK_SIZE"]
 ##Default directory to search for tracker files
 SERVER_DIR = '.'
 
@@ -44,7 +51,7 @@ def list_command(conn, addr, command):
             file_name = tracker_file.get_filename()
             data = "{0} {1} {2} {3}".format(str(count), file_name, str(file_size), md5)
             conn.sendall(data)
-            print "+=+=+=data {0}".format(data)
+            # print "+=+=+=data {0}".format(data)
             count += 1
         else:
             print 'Error parsing tracker file'
@@ -174,8 +181,11 @@ try:
     while True:
         (connection, addr) = sock.accept()
         print "Connection address: {0}".format(addr)
-        thread = Thread(target=handle_client, args=(connection, addr))
-        thread.start()
+        thread = threading.Thread(target=handle_client, args=(connection, addr))
+        try:
+            thread.start()
+        except:
+            pass
 except KeyboardInterrupt:
     print
     sock.close()
