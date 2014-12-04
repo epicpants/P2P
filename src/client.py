@@ -272,13 +272,15 @@ def thread_handler(peer_address, peer_port, start_byte, num_bytes, writer):
          # Enter critical section
         THREAD_LOCK.acquire()
 
-        # Write to file
-        writer.seek(start_byte)
-        writer.write(data)
-        writer.flush()
-
-        # Update byte roster
-        update_unwritten_bytes(start_byte, num_bytes)
+        try:
+            # Write to file
+            writer.seek(start_byte)
+            writer.write(data)
+            writer.flush()
+            # Update byte roster
+            update_unwritten_bytes(start_byte, num_bytes)
+        except IOError:
+            pass
 
         THREAD_LOCK.release()
     except socket.error:
@@ -310,30 +312,38 @@ def get_file():
     # For details, see: http://pymotw.com/2/mmap/
     writer = mmap.mmap(target_file.fileno(), config["TARGET_FILE_SIZE"] + 1)
     tracker_file = tracker_parser.TrackerFile()
+    threads = []
     while True:
         if tracker_file.parseTrackerFile('{0}.track'.format(config["TARGET_FILE"])):  # true if error
             return False
 
-        threads = []
         for host in tracker_file.hosts:  # spawn a new thread for each host
             (start_byte, num_bytes) = get_bytes_to_req(host)
             # print "//////// Client {0}, [get_file] num_bytes = {1}".format(client_num, num_bytes)
-            if num_bytes > 0:
+            if num_bytes > 0 and len(threads) < 6:
                 thread = threading.Thread(target=thread_handler, args=(host.ip_addr, host.port, start_byte, num_bytes, writer))
                 try:
                     thread.start()
-                    threads.append(thread)
+                    threads.append((thread, 0))  # thread, timeout
                 except:
                     pass
 
         # wait until all threads complete or timeout occurs
         timeout = 0
+        for (thread, timeout) in [(thread, timeout) for thread, timeout in threads if not thread.is_alive() or timeout > config["THREAD_TIMEOUT"]]:
+            threads.remove((thread, timeout))
+
+        for (thread, timeout) in threads:
+            timeout += 1
+        """
         while len([thread for thread in threads if thread.is_alive()]) != 0 and timeout < config["THREAD_TIMEOUT"]:
             timeout += 1
             time.sleep(1)
+        """
 
         if len(unwritten_bytes) == 0:  # no bytes left to be written - we're done!
             break
+        # time.sleep(1)
 
     target_file.truncate(config["TARGET_FILE_SIZE"])
     # TODO: check md5
