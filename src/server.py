@@ -171,7 +171,12 @@ os.chdir(sys.argv[1])
 
 print "Starting server, hostname = {}".format(socket.gethostname())
 sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.bind(('', SERVER_PORT))
+while True:
+    try:
+        sock.bind(('', SERVER_PORT))
+        break
+    except socket.error:
+        pass
 print "Bound socket to port {}".format(SERVER_PORT)
 sock.listen(5)
 print "Listening for clients..."
