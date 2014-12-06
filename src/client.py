@@ -84,7 +84,7 @@ def advertise_info(time_slot):
 # @param host Single Host line from Tracker File
 def get_bytes_to_req(host):
     THREAD_LOCK.acquire()
-    byte_range = [(start, end) for (start, end) in unwritten_bytes if host.start_byte < end and host.start_byte <= start and host.end_byte > start]
+    byte_range = [(start, end) for (start, end) in unwritten_bytes if host.start_byte < end and host.end_byte > start]
     if len(byte_range) == 0:  # no bytes the host is offering need to be written
         THREAD_LOCK.release()
         return 0, 0
