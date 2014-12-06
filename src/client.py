@@ -221,21 +221,36 @@ def get_tracker_file():
     while True:
         data = sock.recv(config["CHUNK_SIZE"])
         if not data:
+            tracker_file.close()
             break
         match = re.match(r"REP\sGET\sEND\s(.+)", data)
         if match:
             rec_tracker_md5 = match.group(1)
+            tracker_file.close()
             break
         tracker_file.write(data)
         calc_tracker_md5.update(data)
 
+    debug = open("{0}.track".format(config["TARGET_FILE"]), 'r')
+    contents = ""
+    for line in debug.readlines():
+        line = re.sub(r"REP\sGET\sEND\s(.+)", "", line)
+        contents += line
+    debug.close()
+    debug = open("{0}.track".format(config["TARGET_FILE"]), 'w+')
+    debug.write(contents)
+    debug.close()
+
     if str(calc_tracker_md5.hexdigest()) == rec_tracker_md5:
+        # print "client {0}, md5 = {1}".format(client_num, rec_tracker_md5)
         error = False
     sock.close()
+    """
     tracker = tracker_parser.TrackerFile()
     tracker.parseTrackerFile(tracker_filename)
     tracker._rewrite_file()
     tracker_file.close()
+    """
     return error
 
 
