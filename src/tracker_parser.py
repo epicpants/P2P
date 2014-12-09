@@ -320,10 +320,11 @@ class TrackerFile():
 
     ## Rewrites the information stored in this class back to the tracker file.
     # @param self Reference to this object
-    def _rewrite_file(self):
+    def _rewrite_file(self, debug = False):
         if self.filename != '':
             # Remove outdated hosts
             self._remove_hosts()
+
             """
             if os.path.isfile(self.filename + '.track'):
                 os.remove(self.filename + '.track')
@@ -339,7 +340,8 @@ class TrackerFile():
 
             #Write valid host information to tracker file
             for host in self.hosts:
-                # print "{0}:{1}:{2}:{3}:{4}:{5}".format(host.ip_addr, host.port, host.start_byte, host.end_byte, host.time_stamp)
+                if debug:
+                    print "{0}:{1}:{2}:{3}:{4}".format(host.ip_addr, host.port, host.start_byte, host.end_byte, host.time_stamp)
                 tracker_file.write(host.ip_addr + ":")
                 tracker_file.write(str(host.port) + ":")
                 tracker_file.write(str(host.start_byte) + ":")
